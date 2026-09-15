@@ -63,6 +63,7 @@ fun OnboardingScreen(
                         onClick = onOnboardingComplete,
                         modifier = Modifier
                             .fillMaxWidth()
+                            .navigationBarsPadding()
                             .padding(24.dp)
                             .height(56.dp),
                         colors = ButtonDefaults.buttonColors(

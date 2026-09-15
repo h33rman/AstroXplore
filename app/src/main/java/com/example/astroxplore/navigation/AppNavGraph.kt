@@ -16,6 +16,7 @@ import com.example.astroxplore.features.onboarding.ui.OnboardingScreen
 import com.example.astroxplore.features.profile.ui.LanguageScreen
 import com.example.astroxplore.features.profile.ui.ProfileScreen
 import com.example.astroxplore.features.search.ui.ExploreScreen
+import com.example.astroxplore.features.splash.ui.SplashScreen
 
 @Composable
 fun AppNavGraph(
@@ -24,9 +25,18 @@ fun AppNavGraph(
 ) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Login,
+        startDestination = Screen.Splash,
         modifier = modifier
     ) {
+        composable<Screen.Splash> {
+            SplashScreen(
+                onSplashComplete = {
+                    navController.navigate(Screen.Onboarding) {
+                        popUpTo(Screen.Splash) { inclusive = true }
+                    }
+                }
+            )
+        }
         composable<Screen.Feed> {
             FeedScreen()
         }
@@ -52,7 +62,7 @@ fun AppNavGraph(
         composable<Screen.Login> {
             LoginScreen(
                 onLoginSuccess = {
-                    navController.navigate(Screen.Onboarding) {
+                    navController.navigate(Screen.Feed) {
                         popUpTo(Screen.Login) { inclusive = true }
                     }
                 },
@@ -64,7 +74,7 @@ fun AppNavGraph(
         composable<Screen.Signup> {
             SignupScreen(
                 onSignupSuccess = {
-                    navController.navigate(Screen.Onboarding) {
+                    navController.navigate(Screen.Feed) {
                         popUpTo(Screen.Signup) { inclusive = true }
                     }
                 },
@@ -80,7 +90,7 @@ fun AppNavGraph(
         }
         composable<Screen.Onboarding> {
             OnboardingScreen(onOnboardingComplete = {
-                navController.navigate(Screen.Feed) {
+                navController.navigate(Screen.Login) {
                     popUpTo(Screen.Onboarding) { inclusive = true }
                 }
             })

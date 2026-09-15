@@ -29,7 +29,9 @@
     <string name="password">पासवर्ड</string>
     <string name="full_name">पूरा नाम</string>
     <string name="dont_have_account">खाता नहीं है? साइन अप करें</string>
+    <string name="dont_have_account_prefix">खाता नहीं है? </string>
     <string name="already_have_account">पहले से ही एक खाता है? लॉगिन करें</string>
+    <string name="already_have_account_prefix">पहले से ही एक खाता है? </string>
     <string name="onboarding_title">अपनी फ़ीड को कस्टमाइज़ करें</string>
     <string name="onboarding_desc">प्रासंगिक शोध खोजना शुरू करने के लिए कम से कम 3 विषय चुनें।</string>
     <string name="get_started">शुरू करें</string>
@@ -42,4 +44,11 @@
     <string name="confirm_logout">लॉगआउट की पुष्टि करें</string>
     <string name="logout_message">क्या आप वाकई AstroXplore से लॉगआउट करना चाहते हैं?</string>
     <string name="cancel">रद्द करें</string>
+    <string name="first_name">पहला नाम</string>
+    <string name="last_name">अंतिम नाम</string>
+    <string name="affiliation_type">संबद्धता का प्रकार</string>
+    <string name="affiliation_name">संबद्धता का नाम (यदि लागू हो)</string>
+    <string name="country">देश</string>
+    <string name="education_level">शिक्षा का स्तर</string>
+    <string name="research_interests">अनुसंधान रुचियां</string>
 </resources>

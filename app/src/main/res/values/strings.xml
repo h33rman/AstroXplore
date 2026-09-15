@@ -34,7 +34,9 @@
     <string name="email">Email</string>
     <string name="password">Password</string>
     <string name="dont_have_account">Don\'t have an account? Sign Up</string>
+    <string name="dont_have_account_prefix">Don\'t have an account? </string>
     <string name="already_have_account">Already have an account? Login</string>
+    <string name="already_have_account_prefix">Already have an account? </string>
 
     <string name="onboarding_title">Tailor Your Feed</string>
     <string name="onboarding_desc">Select at least 3 topics to start discovering relevant research.</string>
@@ -45,4 +47,11 @@
     <string name="search_placeholder">Search preprints, authors, bibc...</string>
     <string name="sign_up_desc">Join the astrophysics community</string>
     <string name="full_name">Full Name</string>
+    <string name="first_name">First Name</string>
+    <string name="last_name">Last Name</string>
+    <string name="affiliation_type">Affiliation Type</string>
+    <string name="affiliation_name">Affiliation Name (if applicable)</string>
+    <string name="country">Country</string>
+    <string name="education_level">Education Level</string>
+    <string name="research_interests">Research Interests</string>
 </resources>

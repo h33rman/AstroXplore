@@ -23,7 +23,9 @@
     <string name="email">Email</string>
     <string name="password">Mot de passe</string>
     <string name="dont_have_account">Pas de compte ? S\'inscrire</string>
+    <string name="dont_have_account_prefix">Pas de compte ? </string>
     <string name="already_have_account">Déjà un compte ? Connexion</string>
+    <string name="already_have_account_prefix">Déjà un compte ? </string>
     <string name="onboarding_title">Personnalisez votre flux</string>
     <string name="onboarding_desc">Sélectionnez au moins 3 sujets pour commencer à découvrir des recherches pertinentes.</string>
     <string name="get_started">Commencer</string>
@@ -40,4 +42,11 @@
     <string name="confirm_logout">Confirmer la déconnexion</string>
     <string name="logout_message">Êtes-vous sûr de vouloir vous déconnecter d\'AstroXplore ?</string>
     <string name="cancel">Annuler</string>
+    <string name="first_name">Prénom</string>
+    <string name="last_name">Nom</string>
+    <string name="affiliation_type">Type d\'affiliation</string>
+    <string name="affiliation_name">Nom de l\'affiliation (le cas échéant)</string>
+    <string name="country">Pays</string>
+    <string name="education_level">Niveau d\'éducation</string>
+    <string name="research_interests">Centres d\'intérêt de recherche</string>
 </resources>

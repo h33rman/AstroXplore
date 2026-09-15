@@ -3,12 +3,16 @@ package com.example.astroxplore.features.auth.ui
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,13 +23,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.astroxplore.R
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun SignupScreen(
     onSignupSuccess: () -> Unit,
@@ -34,9 +39,21 @@ fun SignupScreen(
     modifier: Modifier = Modifier,
     viewModel: SignupViewModel = hiltViewModel()
 ) {
-    var name by remember { mutableStateOf("") }
+    var firstName by remember { mutableStateOf("") }
+    var lastName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
+    var affiliationType by remember { mutableStateOf("") }
+    var affiliationName by remember { mutableStateOf("") }
+    var country by remember { mutableStateOf("") }
+    var educationLevel by remember { mutableStateOf("") }
+    val selectedInterests = remember { mutableStateListOf<String>() }
+
+    var affiliationExpanded by remember { mutableStateOf(false) }
+    var countryExpanded by remember { mutableStateOf(false) }
+    var educationExpanded by remember { mutableStateOf(false) }
+
     val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(uiState) {
@@ -61,7 +78,7 @@ fun SignupScreen(
             containerColor = Color.Transparent,
             topBar = {
                 TopAppBar(
-                    title = {},
+                    title = { Text(stringResource(R.string.signup)) },
                     navigationIcon = {
                         IconButton(onClick = onNavigateBack) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -85,36 +102,37 @@ fun SignupScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(horizontal = 32.dp),
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.Top,
                 horizontalAlignment = Alignment.Start
             ) {
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                Text(
-                    text = stringResource(R.string.signup),
-                    style = MaterialTheme.typography.displayMedium,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                
                 Text(
                     text = stringResource(R.string.sign_up_desc),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                Spacer(modifier = Modifier.height(48.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text(stringResource(R.string.full_name)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-                    shape = MaterialTheme.shapes.large,
-                    singleLine = true
-                )
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    OutlinedTextField(
+                        value = firstName,
+                        onValueChange = { firstName = it },
+                        label = { Text(stringResource(R.string.first_name)) },
+                        modifier = Modifier.weight(1f),
+                        shape = MaterialTheme.shapes.large,
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = lastName,
+                        onValueChange = { lastName = it },
+                        label = { Text(stringResource(R.string.last_name)) },
+                        modifier = Modifier.weight(1f),
+                        shape = MaterialTheme.shapes.large,
+                        singleLine = true
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -137,53 +155,226 @@ fun SignupScreen(
                     label = { Text(stringResource(R.string.password)) },
                     modifier = Modifier.fillMaxWidth(),
                     leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-                    visualTransformation = PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(
+                                imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                contentDescription = if (passwordVisible) "Hide password" else "Show password"
+                            )
+                        }
+                    },
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     shape = MaterialTheme.shapes.large,
                     singleLine = true
                 )
 
-                Spacer(modifier = Modifier.height(40.dp))
+                Spacer(modifier = Modifier.height(24.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(24.dp))
 
-                Button(
-                    onClick = { viewModel.signup(email, password, name) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    enabled = uiState !is SignupUiState.Loading && email.isNotEmpty() && password.isNotEmpty(),
-                    shape = MaterialTheme.shapes.extraLarge
+                // Affiliation Dropdown
+                ExposedDropdownMenuBox(
+                    expanded = affiliationExpanded,
+                    onExpandedChange = { affiliationExpanded = !affiliationExpanded }
                 ) {
-                    AnimatedContent(
-                        targetState = uiState is SignupUiState.Loading,
-                        label = "loading"
-                    ) { isLoading ->
-                        if (isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(28.dp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                strokeWidth = 3.dp
+                    OutlinedTextField(
+                        value = affiliationType,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text(stringResource(R.string.affiliation_type)) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = affiliationExpanded) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                        shape = MaterialTheme.shapes.large
+                    )
+                    ExposedDropdownMenu(
+                        expanded = affiliationExpanded,
+                        onDismissRequest = { affiliationExpanded = false }
+                    ) {
+                        viewModel.affiliationTypes.forEach { type ->
+                            DropdownMenuItem(
+                                text = { Text(type) },
+                                onClick = {
+                                    affiliationType = type
+                                    affiliationExpanded = false
+                                }
                             )
-                        } else {
-                            Text(
-                                text = stringResource(R.string.signup),
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold
+                        }
+                    }
+                }
+
+                if (affiliationType != "Individual" && affiliationType.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = affiliationName,
+                        onValueChange = { affiliationName = it },
+                        label = { Text(stringResource(R.string.affiliation_name)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.large,
+                        singleLine = true
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Country Dropdown
+                ExposedDropdownMenuBox(
+                    expanded = countryExpanded,
+                    onExpandedChange = { countryExpanded = !countryExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = country,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text(stringResource(R.string.country)) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = countryExpanded) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                        shape = MaterialTheme.shapes.large
+                    )
+                    ExposedDropdownMenu(
+                        expanded = countryExpanded,
+                        onDismissRequest = { countryExpanded = false }
+                    ) {
+                        viewModel.countries.forEach { item ->
+                            DropdownMenuItem(
+                                text = { Text(item) },
+                                onClick = {
+                                    country = item
+                                    countryExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Education Level Dropdown
+                ExposedDropdownMenuBox(
+                    expanded = educationExpanded,
+                    onExpandedChange = { educationExpanded = !educationExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = educationLevel,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text(stringResource(R.string.education_level)) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = educationExpanded) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                        shape = MaterialTheme.shapes.large
+                    )
+                    ExposedDropdownMenu(
+                        expanded = educationExpanded,
+                        onDismissRequest = { educationExpanded = false }
+                    ) {
+                        viewModel.educationLevels.forEach { level ->
+                            DropdownMenuItem(
+                                text = { Text(level) },
+                                onClick = {
+                                    educationLevel = level
+                                    educationExpanded = false
+                                }
                             )
                         }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    text = stringResource(R.string.research_interests),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(12.dp))
 
-                TextButton(
-                    onClick = onNavigateToLogin,
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    viewModel.researchInterests.forEach { interest ->
+                        FilterChip(
+                            selected = selectedInterests.contains(interest),
+                            onClick = {
+                                if (selectedInterests.contains(interest)) {
+                                    selectedInterests.remove(interest)
+                                } else {
+                                    selectedInterests.add(interest)
+                                }
+                            },
+                            label = { Text(interest) }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(40.dp))
+
+                Button(
+                    onClick = {
+                        viewModel.signup(
+                            email = email,
+                            password = password,
+                            firstName = firstName,
+                            lastName = lastName,
+                            affiliationType = affiliationType,
+                            affiliationName = affiliationName,
+                            country = country,
+                            educationLevel = educationLevel,
+                            interests = selectedInterests
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    enabled = uiState !is SignupUiState.Loading &&
+                            email.isNotEmpty() && password.isNotEmpty() &&
+                            firstName.isNotEmpty() && lastName.isNotEmpty() &&
+                            country.isNotEmpty() && educationLevel.isNotEmpty(),
+                    shape = MaterialTheme.shapes.extraLarge
+                ) {
+                    if (uiState is SignupUiState.Loading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(28.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 3.dp
+                        )
+                    } else {
+                        Text(
+                            text = stringResource(R.string.signup),
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = stringResource(R.string.already_have_account),
+                        text = stringResource(R.string.already_have_account_prefix),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    TextButton(
+                        onClick = onNavigateToLogin
+                    ) {
+                        Text(
+                            text = stringResource(R.string.login),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
 
                 if (uiState is SignupUiState.Error) {

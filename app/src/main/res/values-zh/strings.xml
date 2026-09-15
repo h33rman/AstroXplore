@@ -29,7 +29,9 @@
     <string name="password">密码</string>
     <string name="full_name">全名</string>
     <string name="dont_have_account">没有账户？立即注册</string>
+    <string name="dont_have_account_prefix">没有账户？</string>
     <string name="already_have_account">已有账户？立即登录</string>
+    <string name="already_have_account_prefix">已有账户？</string>
     <string name="onboarding_title">定制您的订阅源</string>
     <string name="onboarding_desc">选择至少 3 个话题，开始发现相关的研究。</string>
     <string name="get_started">开始体验</string>
@@ -42,4 +44,11 @@
     <string name="confirm_logout">确认退出</string>
     <string name="logout_message">您确定要退出 AstroXplore 吗？</string>
     <string name="cancel">取消</string>
+    <string name="first_name">名字</string>
+    <string name="last_name">姓氏</string>
+    <string name="affiliation_type">隶属类型</string>
+    <string name="affiliation_name">单位名称（如有）</string>
+    <string name="country">国家</string>
+    <string name="education_level">教育程度</string>
+    <string name="research_interests">研究兴趣</string>
 </resources>

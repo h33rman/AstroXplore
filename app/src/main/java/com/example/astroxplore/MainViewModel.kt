@@ -14,7 +14,6 @@ import javax.inject.Inject
 class MainViewModel @Inject constructor(
     private val authRepository: AuthRepository
 ) : ViewModel() {
-
     val sessionStatus: StateFlow<SessionStatus> = authRepository.sessionStatus
         .stateIn(
             scope = viewModelScope,

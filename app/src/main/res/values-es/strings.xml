@@ -29,7 +29,9 @@
     <string name="password">Contraseña</string>
     <string name="full_name">Nombre completo</string>
     <string name="dont_have_account">¿No tienes una cuenta? Regístrate</string>
+    <string name="dont_have_account_prefix">¿No tienes una cuenta? </string>
     <string name="already_have_account">¿Ya tienes una cuenta? Inicia sesión</string>
+    <string name="already_have_account_prefix">¿Ya tienes una cuenta? </string>
     <string name="onboarding_title">Personaliza tu feed</string>
     <string name="onboarding_desc">Selecciona al menos 3 temas para empezar a descubrir investigaciones relevantes.</string>
     <string name="get_started">Empezar</string>
@@ -42,4 +44,11 @@
     <string name="confirm_logout">Confirmar cierre de sesión</string>
     <string name="logout_message">¿Estás seguro de que quieres cerrar la sesión en AstroXplore?</string>
     <string name="cancel">Cancelar</string>
+    <string name="first_name">Nombre</string>
+    <string name="last_name">Apellido</string>
+    <string name="affiliation_type">Tipo de afiliación</string>
+    <string name="affiliation_name">Nombre de la afiliación (si aplica)</string>
+    <string name="country">País</string>
+    <string name="education_level">Nivel educativo</string>
+    <string name="research_interests">Intereses de investigación</string>
 </resources>
