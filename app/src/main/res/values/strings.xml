@@ -1,0 +1,48 @@
+<resources>
+    <string name="app_name" translatable="false">AstroXplore</string>
+    <string name="settings">Settings</string>
+    <string name="scholar">Scholar</string>
+    <string name="no_institution">No Institution Set</string>
+    <string name="papers">Papers</string>
+    <string name="groups">Groups</string>
+    <string name="citations">Citations</string>
+    <string name="general">GENERAL</string>
+    <string name="language">Language</string>
+    <string name="theme">THEME</string>
+    <string name="system">System</string>
+    <string name="light">Light</string>
+    <string name="dark">Dark</string>
+    <string name="dynamic_color">Material You Dynamic Color</string>
+    <string name="dynamic_color_desc">Use system wallpaper colors</string>
+    <string name="account_data">ACCOUNT &amp; DATA</string>
+    <string name="nasa_ads_config">NASA ADS API Configuration</string>
+    <string name="nasa_ads_active">NASA ADS Key Active</string>
+    <string name="storage_offline">Storage &amp; Offline</string>
+    <string name="synced_cloud">Synced with Cloud</string>
+    <string name="logout">Logout</string>
+    <string name="confirm_logout">Confirm Logout</string>
+    <string name="logout_message">Are you sure you want to log out of AstroXplore?</string>
+    <string name="cancel">Cancel</string>
+    <string name="discovery">Discovery</string>
+    <string name="select_language">Select Language</string>
+
+    <string name="login">Login</string>
+    <string name="signup">Sign Up</string>
+    <string name="welcome_back">Welcome Back</string>
+    <string name="welcome_to_astroxplore">Welcome to AstroXplore</string>
+    <string name="sign_in_desc">Sign in to your account</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="dont_have_account">Don\'t have an account? Sign Up</string>
+    <string name="already_have_account">Already have an account? Login</string>
+
+    <string name="onboarding_title">Tailor Your Feed</string>
+    <string name="onboarding_desc">Select at least 3 topics to start discovering relevant research.</string>
+    <string name="get_started">Get Started</string>
+    <string name="ready_to_explore">Ready to Explore?</string>
+    <string name="explore_desc">Search with keywords like \"exoplanets\", \"black holes\", or authors to find the latest research.</string>
+    <string name="advanced_search_tip">Tip: Use the Advanced Search icon for better precision in results.</string>
+    <string name="search_placeholder">Search preprints, authors, bibc...</string>
+    <string name="sign_up_desc">Join the astrophysics community</string>
+    <string name="full_name">Full Name</string>
+</resources>
