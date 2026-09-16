@@ -24,15 +24,19 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.astroxplore.R
 import com.example.astroxplore.core.database.ThemeMode
+import com.example.astroxplore.features.profile.model.ProfileModel
 
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     onNavigateToLanguage: () -> Unit,
+    onNavigateToInterests: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
@@ -40,33 +44,9 @@ fun ProfileScreen(
     var showLogoutDialog by remember { mutableStateOf(false) }
 
     if (showLogoutDialog) {
-        AlertDialog(
-            onDismissRequest = { showLogoutDialog = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showLogoutDialog = false
-                        viewModel.logout()
-                    }
-                ) {
-                    Text(
-                        text = stringResource(R.string.logout),
-                        color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showLogoutDialog = false }) {
-                    Text(text = stringResource(R.string.cancel))
-                }
-            },
-            title = { Text(text = stringResource(R.string.confirm_logout)) },
-            text = { Text(text = stringResource(R.string.logout_message)) },
-            shape = MaterialTheme.shapes.extraLarge,
-            containerColor = MaterialTheme.colorScheme.surface,
-            titleContentColor = MaterialTheme.colorScheme.onSurface,
-            textContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        LogoutDialog(
+            onDismiss = { showLogoutDialog = false },
+            onConfirm = { viewModel.logout() }
         )
     }
 
@@ -84,7 +64,18 @@ fun ProfileScreen(
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        ProfileHeaderCard()
+        ProfileHeaderCard(profile = uiState.profile)
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        SettingsSection(title = "RESEARCH PREFERENCES") {
+            SettingsItem(
+                icon = Icons.Default.AutoAwesome,
+                title = "My Interests",
+                subtitle = if (uiState.interests.isEmpty()) "Select your research topics" else uiState.interests.joinToString(", "),
+                onClick = onNavigateToInterests
+            )
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -146,7 +137,7 @@ fun ProfileScreen(
 }
 
 @Composable
-fun ProfileHeaderCard() {
+fun ProfileHeaderCard(profile: ProfileModel?) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge,
@@ -191,12 +182,12 @@ fun ProfileHeaderCard() {
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = stringResource(R.string.scholar),
+                text = profile?.fullName ?: profile?.firstName ?: stringResource(R.string.scholar),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = stringResource(R.string.no_institution),
+                text = profile?.institution ?: profile?.affiliationName ?: stringResource(R.string.no_institution),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -213,6 +204,35 @@ fun ProfileHeaderCard() {
             }
         }
     }
+}
+
+@Composable
+fun LogoutDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm
+            ) {
+                Text(
+                    text = stringResource(R.string.logout),
+                    color = MaterialTheme.colorScheme.error,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { onDismiss() }) {
+                Text(text = stringResource(R.string.cancel))
+            }
+        },
+        title = { Text(text = stringResource(R.string.confirm_logout)) },
+        text = { Text(text = stringResource(R.string.logout_message)) },
+        shape = MaterialTheme.shapes.extraLarge,
+        containerColor = MaterialTheme.colorScheme.surface,
+        titleContentColor = MaterialTheme.colorScheme.onSurface,
+        textContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+    )
 }
 
 @Composable
@@ -234,13 +254,15 @@ fun StatItem(label: String, value: String) {
 @Composable
 fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
+        if (title.isNotEmpty()) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+        }
         content()
     }
 }
@@ -274,7 +296,13 @@ fun SettingsItem(
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Text(text = subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                text = subtitle, 
+                style = MaterialTheme.typography.bodyMedium, 
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
         Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
@@ -379,13 +407,7 @@ fun DynamicColorToggle(
         }
         Switch(
             checked = enabled,
-            onCheckedChange = onToggle,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
-            )
+            onCheckedChange = onToggle
         )
     }
 }

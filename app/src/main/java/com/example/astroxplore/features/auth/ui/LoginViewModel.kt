@@ -2,7 +2,11 @@ package com.example.astroxplore.features.auth.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.astroxplore.R
+import com.example.astroxplore.core.util.ErrorMapper
 import com.example.astroxplore.features.auth.data.AuthRepository
+import com.example.astroxplore.features.profile.data.ProfileRepository
+import com.example.astroxplore.features.profile.model.ProfileModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -11,7 +15,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val profileRepository: ProfileRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<LoginUiState>(LoginUiState.Idle)
@@ -22,9 +27,27 @@ class LoginViewModel @Inject constructor(
             _uiState.value = LoginUiState.Loading
             try {
                 authRepository.login(email, password)
-                _uiState.value = LoginUiState.Success
+                val user = authRepository.currentUser
+                if (user != null) {
+                    var profile = profileRepository.getProfile(user.id)
+                    
+                    // If profile doesn't exist (e.g., signup needed confirmation), create it now
+                    if (profile == null) {
+                        val newProfile = ProfileModel(
+                            id = user.id,
+                            email = user.email ?: email,
+                            isOnboarded = false
+                        )
+                        profileRepository.updateProfile(newProfile)
+                        profile = newProfile
+                    }
+                    
+                    _uiState.value = LoginUiState.Success(isOnboarded = profile.isOnboarded)
+                } else {
+                    _uiState.value = LoginUiState.Error(R.string.error_unknown)
+                }
             } catch (e: Exception) {
-                _uiState.value = LoginUiState.Error(e.message ?: "Login failed")
+                _uiState.value = LoginUiState.Error(ErrorMapper.mapToMessage(e))
             }
         }
     }
@@ -33,6 +56,6 @@ class LoginViewModel @Inject constructor(
 sealed interface LoginUiState {
     data object Idle : LoginUiState
     data object Loading : LoginUiState
-    data object Success : LoginUiState
-    data class Error(val message: String) : LoginUiState
+    data class Success(val isOnboarded: Boolean) : LoginUiState
+    data class Error(val messageResId: Int) : LoginUiState
 }

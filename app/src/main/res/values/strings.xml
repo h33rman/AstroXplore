@@ -54,4 +54,12 @@
     <string name="country">Country</string>
     <string name="education_level">Education Level</string>
     <string name="research_interests">Research Interests</string>
+
+    <!-- Error Messages -->
+    <string name="error_network">Network connection issue. Please check your internet.</string>
+    <string name="error_invalid_credentials">Invalid email or password.</string>
+    <string name="error_user_exists">An account with this email already exists.</string>
+    <string name="error_unknown">Something went wrong. Please try again later.</string>
+    <string name="error_session_expired">Session expired. Please log in again.</string>
+    <string name="error_database">Failed to sync your data. Please try again.</string>
 </resources>

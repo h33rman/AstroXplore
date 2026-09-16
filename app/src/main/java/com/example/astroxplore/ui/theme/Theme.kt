@@ -24,6 +24,9 @@ private val DarkColorScheme = darkColorScheme(
     onBackground = md_theme_dark_onBackground,
     surface = md_theme_dark_surface,
     onSurface = md_theme_dark_onSurface,
+    surfaceVariant = md_theme_dark_surfaceVariant,
+    onSurfaceVariant = md_theme_dark_onSurfaceVariant,
+    outline = md_theme_dark_outline,
     outlineVariant = md_theme_dark_outlineVariant,
 )
 
@@ -41,6 +44,9 @@ private val LightColorScheme = lightColorScheme(
     onBackground = md_theme_light_onBackground,
     surface = md_theme_light_surface,
     onSurface = md_theme_light_onSurface,
+    surfaceVariant = md_theme_light_surfaceVariant,
+    onSurfaceVariant = md_theme_light_onSurfaceVariant,
+    outline = md_theme_light_outline,
     outlineVariant = md_theme_light_outlineVariant,
 )
 

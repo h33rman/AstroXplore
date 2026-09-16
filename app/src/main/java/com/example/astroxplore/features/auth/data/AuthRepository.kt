@@ -1,6 +1,7 @@
 package com.example.astroxplore.features.auth.data
 
-import com.example.astroxplore.core.model.UserProfile
+import com.example.astroxplore.features.profile.model.ProfileModel
+import com.example.astroxplore.features.profile.model.UserPreference
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
@@ -21,15 +22,34 @@ class AuthRepository @Inject constructor(
         }
     }
 
-    suspend fun register(email: String, password: String, profile: UserProfile) {
-        val response = supabaseClient.auth.signUpWith(Email) {
+    /**
+     * @return Boolean - true if email confirmation is required
+     */
+    suspend fun register(email: String, password: String, firstName: String, lastName: String): Boolean {
+        val user = supabaseClient.auth.signUpWith(Email) {
             this.email = email
             this.password = password
-        }
-        val user = response ?: throw Exception("Signup failed: User is null")
+        } ?: throw Exception("Signup failed: User is null")
         
-        // Save profile to Supabase 'profiles' table
-        supabaseClient.postgrest["profiles"].insert(profile.copy(id = user.id))
+        val session = supabaseClient.auth.currentSessionOrNull()
+        
+        if (session != null) {
+            // Confirmation is OFF, we can create the profile record immediately
+            val initialProfile = ProfileModel(
+                id = user.id,
+                email = email,
+                firstName = firstName,
+                lastName = lastName,
+                fullName = "$firstName $lastName",
+                isOnboarded = false
+            )
+            supabaseClient.postgrest["profiles"].insert(initialProfile)
+            return false
+        } else {
+            // Confirmation is ON. We can't write to DB yet (RLS).
+            // We'll store these details locally or handle it upon first login.
+            return true
+        }
     }
 
     suspend fun logout() {
@@ -38,7 +58,7 @@ class AuthRepository @Inject constructor(
 
     val sessionStatus: Flow<SessionStatus> = supabaseClient.auth.sessionStatus
 
-    val currentUser = supabaseClient.auth.currentSessionOrNull()?.user
+    val currentUser get() = supabaseClient.auth.currentUserOrNull()
     
     fun isLoggedIn(): Boolean = supabaseClient.auth.currentSessionOrNull() != null
 }

@@ -16,12 +16,12 @@ class SettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
-    val uiState: StateFlow<ProfileSettingsUiState> = combine(
+    val uiState: StateFlow<ProfileUiState> = combine(
         settingsRepository.themeMode,
         settingsRepository.dynamicColorEnabled,
         settingsRepository.language
     ) { themeMode, dynamicColor, language ->
-        ProfileSettingsUiState(
+        ProfileUiState(
             themeMode = themeMode,
             dynamicColorEnabled = dynamicColor,
             language = language
@@ -29,6 +29,6 @@ class SettingsViewModel @Inject constructor(
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = ProfileSettingsUiState()
+        initialValue = ProfileUiState()
     )
 }

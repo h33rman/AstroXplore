@@ -9,6 +9,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import dagger.hilt.android.AndroidEntryPoint
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
@@ -16,6 +22,11 @@ import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.Explore
+import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.Newspaper
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteDefaults
@@ -27,11 +38,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -39,7 +50,7 @@ import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.astroxplore.core.database.ThemeMode
-import com.example.astroxplore.features.profile.ui.SettingsViewModel
+import com.example.astroxplore.features.profile.ui.ProfileViewModel
 import com.example.astroxplore.navigation.AppNavGraph
 import com.example.astroxplore.navigation.Screen
 import com.example.astroxplore.ui.theme.AstroXploreTheme
@@ -58,8 +69,8 @@ class MainActivity : ComponentActivity() {
             val mainViewModel: MainViewModel = hiltViewModel()
             val sessionStatus by mainViewModel.sessionStatus.collectAsState()
 
-            val settingsViewModel: SettingsViewModel = hiltViewModel()
-            val settingsState by settingsViewModel.uiState.collectAsState()
+            val profileViewModel: ProfileViewModel = hiltViewModel()
+            val settingsState by profileViewModel.uiState.collectAsState()
 
             val darkTheme = when (settingsState.themeMode) {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
@@ -89,7 +100,8 @@ class MainActivity : ComponentActivity() {
                     darkTheme = darkTheme,
                     dynamicColor = settingsState.dynamicColorEnabled
                 ) {
-                    AstroXploreMain(sessionStatus)
+                    val isOnboarded by mainViewModel.isOnboarded.collectAsState()
+                    AstroXploreMain(sessionStatus, isOnboarded)
                 }
             }
         }
@@ -98,16 +110,30 @@ class MainActivity : ComponentActivity() {
 
 @PreviewScreenSizes
 @Composable
-fun AstroXploreMain(sessionStatus: SessionStatus = SessionStatus.Initializing) {
+fun AstroXploreMain(
+    sessionStatus: SessionStatus = SessionStatus.Initializing,
+    isOnboarded: Boolean? = null
+) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    LaunchedEffect(sessionStatus) {
-        if (sessionStatus is SessionStatus.NotAuthenticated) {
-            val isAuthScreen = currentDestination?.hasRoute<Screen.Login>() == true ||
-                    currentDestination?.hasRoute<Screen.Signup>() == true ||
-                    currentDestination?.hasRoute<Screen.Splash>() == true
+    LaunchedEffect(sessionStatus, isOnboarded) {
+        if (sessionStatus is SessionStatus.Authenticated) {
+            if (isOnboarded == false) {
+                navController.navigate(Screen.Onboarding) {
+                    popUpTo(0) { inclusive = true }
+                }
+            } else if (isOnboarded == true) {
+                navController.navigate(Screen.Feed) {
+                    popUpTo(0) { inclusive = true }
+                }
+            }
+        } else if (sessionStatus is SessionStatus.NotAuthenticated) {
+            val currentRoute = currentDestination?.route
+            val isAuthScreen = currentRoute?.contains("Login") == true ||
+                    currentRoute?.contains("Signup") == true ||
+                    currentRoute?.contains("Splash") == true
             
             if (!isAuthScreen) {
                 navController.navigate(Screen.Login) {
@@ -117,13 +143,30 @@ fun AstroXploreMain(sessionStatus: SessionStatus = SessionStatus.Initializing) {
         }
     }
 
-    val showNavigation = currentDestination != null &&
-            !currentDestination.hasRoute<Screen.Splash>() &&
-            !currentDestination.hasRoute<Screen.Onboarding>() &&
-            !currentDestination.hasRoute<Screen.Login>() &&
-            !currentDestination.hasRoute<Screen.Signup>()
+    val showNavigation = currentDestination != null && (
+            currentDestination.hasRoute<Screen.Feed>() ||
+            currentDestination.hasRoute<Screen.Groups>() ||
+            currentDestination.hasRoute<Screen.Explore>() ||
+            currentDestination.hasRoute<Screen.Library>() ||
+            currentDestination.hasRoute<Screen.Profile>()
+    )
 
     if (showNavigation) {
+        val navSuiteItemColors = NavigationSuiteDefaults.itemColors(
+            navigationBarItemColors = NavigationBarItemDefaults.colors(
+                indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                selectedIconColor = MaterialTheme.colorScheme.primary,
+                selectedTextColor = MaterialTheme.colorScheme.primary,
+                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+            ),
+            navigationRailItemColors = NavigationRailItemDefaults.colors(
+                indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                selectedIconColor = MaterialTheme.colorScheme.primary,
+                selectedTextColor = MaterialTheme.colorScheme.primary,
+            )
+        )
+
         NavigationSuiteScaffold(
             layoutType = NavigationSuiteScaffoldDefaults.calculateFromAdaptiveInfo(
                 currentWindowAdaptiveInfo()
@@ -138,28 +181,39 @@ fun AstroXploreMain(sessionStatus: SessionStatus = SessionStatus.Initializing) {
                     val isSelected = currentDestination?.hasRoute(destination.screen::class) ?: false
                     item(
                         icon = {
-                            Icon(
-                                imageVector = destination.icon,
-                                contentDescription = destination.label
+                            AnimatedContent(
+                                targetState = isSelected,
+                                transitionSpec = {
+                                    (fadeIn(animationSpec = tween(220, delayMillis = 90)) + 
+                                            scaleIn(initialScale = 0.92f, animationSpec = tween(220, delayMillis = 90)))
+                                        .togetherWith(fadeOut(animationSpec = tween(90)))
+                                },
+                                label = "icon_transition"
+                            ) { selected ->
+                                Icon(
+                                    imageVector = if (selected) destination.selectedIcon else destination.unselectedIcon,
+                                    contentDescription = destination.label
+                                )
+                            }
+                        },
+                        label = {
+                            Text(
+                                text = destination.label,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium
                             )
                         },
-                        label = { Text(destination.label) },
                         selected = isSelected,
                         onClick = {
                             navController.navigate(destination.screen) {
-                                // Pop up to the start destination of the graph to
-                                // avoid building up a large stack of destinations
-                                // on the back stack as users select items
-                                popUpTo(Screen.Feed) {
+                                popUpTo(navController.graph.startDestinationId) {
                                     saveState = true
                                 }
-                                // Avoid multiple copies of the same destination when
-                                // reselecting the same item
                                 launchSingleTop = true
-                                // Restore state when reselecting a previously selected item
                                 restoreState = true
                             }
-                        }
+                        },
+                        colors = navSuiteItemColors
                     )
                 }
             }
@@ -173,14 +227,15 @@ fun AstroXploreMain(sessionStatus: SessionStatus = SessionStatus.Initializing) {
 
 enum class AppDestinations(
     val label: String,
-    val icon: ImageVector,
+    val selectedIcon: ImageVector,
+    val unselectedIcon: ImageVector,
     val screen: Screen
 ) {
-    FEED("Feed", Icons.Default.Newspaper, Screen.Feed),
-    GROUPS("Groups", Icons.Default.Groups, Screen.Groups),
-    EXPLORE("Explore", Icons.Default.Explore, Screen.Explore),
-    LIBRARY("Library", Icons.Default.Bookmark, Screen.Library),
-    PROFILE("Profile", Icons.Default.Person, Screen.Profile),
+    FEED("Feed", Icons.Filled.Newspaper, Icons.Outlined.Newspaper, Screen.Feed),
+    GROUPS("Groups", Icons.Filled.Groups, Icons.Outlined.Groups, Screen.Groups),
+    EXPLORE("Explore", Icons.Filled.Explore, Icons.Outlined.Explore, Screen.Explore()),
+    LIBRARY("Library", Icons.Filled.Bookmark, Icons.Outlined.BookmarkBorder, Screen.Library),
+    PROFILE("Profile", Icons.Filled.Person, Icons.Outlined.Person, Screen.Profile),
 }
 
 @Composable

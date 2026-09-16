@@ -51,4 +51,12 @@
     <string name="country">País</string>
     <string name="education_level">Nivel educativo</string>
     <string name="research_interests">Intereses de investigación</string>
+
+    <!-- Error Messages -->
+    <string name="error_network">Problema de conexión de red. Por favor, compruebe su internet.</string>
+    <string name="error_invalid_credentials">Correo electrónico o contraseña no válidos.</string>
+    <string name="error_user_exists">Ya existe una cuenta con este correo electrónico.</string>
+    <string name="error_unknown">Algo salió mal. Por favor, inténtelo de nuevo más tarde.</string>
+    <string name="error_session_expired">Sesión expirada. Por favor, inicie sesión de nuevo.</string>
+    <string name="error_database">Error al sincronizar sus datos. Por favor, inténtelo de nuevo.</string>
 </resources>

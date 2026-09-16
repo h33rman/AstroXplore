@@ -51,4 +51,12 @@
     <string name="country">देश</string>
     <string name="education_level">शिक्षा का स्तर</string>
     <string name="research_interests">अनुसंधान रुचियां</string>
+
+    <!-- Error Messages -->
+    <string name="error_network">नेटवर्क कनेक्शन की समस्या। कृपया अपना इंटरनेट जांचें।</string>
+    <string name="error_invalid_credentials">अमान्य ईमेल या पासवर्ड।</string>
+    <string name="error_user_exists">इस ईमेल वाला खाता पहले से मौजूद है।</string>
+    <string name="error_unknown">कुछ गलत हो गया। कृपया बाद में पुन: प्रयास करें।</string>
+    <string name="error_session_expired">सत्र समाप्त हो गया। कृपया फिर से लॉग इन करें।</string>
+    <string name="error_database">आपका डेटा सिंक करने में विफल रहा। कृपया पुन: प्रयास करें।</string>
 </resources>

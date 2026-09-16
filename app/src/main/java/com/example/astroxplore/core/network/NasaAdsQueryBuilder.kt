@@ -1,5 +1,7 @@
 package com.example.astroxplore.core.network
 
+import com.example.astroxplore.features.search.ui.SearchFilter
+
 object NasaAdsQueryBuilder {
 
     enum class RefereedFilter {
@@ -78,5 +80,102 @@ object NasaAdsQueryBuilder {
 
         // 4. Fallback: Title and Abstract
         return "(title:\"$input\" OR abs:\"$input\" OR author:\"$input\")"
+    }
+
+    /**
+     * Builds a structured ADS query using specific filters
+     */
+    fun buildAdvancedQuery(
+        query: String,
+        filter: SearchFilter
+    ): String {
+        val clauses = mutableListOf<String>()
+
+        if (query.isNotBlank()) {
+            clauses.add(buildQuickSearchQuery(query))
+        }
+
+        filter.yearRange?.let {
+            clauses.add("year:[${it.first} TO ${it.last}]")
+        }
+
+        if (filter.refereedOnly) {
+            clauses.add("property:refereed")
+        }
+
+        if (filter.isOpenAccess) {
+            clauses.add("property:openaccess")
+        }
+
+        if (filter.hasData) {
+            clauses.add("property:data")
+        }
+
+        filter.bibstem?.takeIf { it.isNotBlank() }?.let {
+            clauses.add("bibstem:\"$it\"")
+        }
+
+        filter.author?.takeIf { it.isNotBlank() }?.let {
+            clauses.add("author:\"$it\"")
+        }
+
+        filter.firstAuthor?.takeIf { it.isNotBlank() }?.let {
+            clauses.add("author:\"^$it\"")
+        }
+
+        filter.orcid?.takeIf { it.isNotBlank() }?.let {
+            clauses.add("orcid:\"$it\"")
+        }
+
+        filter.abstractOnly?.takeIf { it.isNotBlank() }?.let {
+            clauses.add("abstract:\"$it\"")
+        }
+
+        filter.titleOnly?.takeIf { it.isNotBlank() }?.let {
+            clauses.add("title:\"$it\"")
+        }
+
+        filter.affiliation?.takeIf { it.isNotBlank() }?.let {
+            clauses.add("aff:\"$it\"")
+        }
+
+        filter.objectName?.takeIf { it.isNotBlank() }?.let {
+            clauses.add("object:\"$it\"")
+        }
+
+        filter.arxivId?.takeIf { it.isNotBlank() }?.let {
+            clauses.add("arXiv:\"$it\"")
+        }
+
+        filter.doi?.takeIf { it.isNotBlank() }?.let {
+            clauses.add("doi:\"$it\"")
+        }
+
+        filter.citationCountMin?.let {
+            clauses.add("citation_count:[$it TO *]")
+        }
+
+        // Pro Filters
+        filter.arxivClass?.takeIf { it.isNotBlank() }?.let {
+            clauses.add("arxiv_class:\"$it\"")
+        }
+
+        filter.authorCountRange?.let {
+            clauses.add("author_count:[${it.first} TO ${it.last}]")
+        }
+
+        filter.bibGroup?.takeIf { it.isNotBlank() }?.let {
+            clauses.add("bibgroup:\"$it\"")
+        }
+
+        filter.database?.takeIf { it.isNotBlank() }?.let {
+            clauses.add("database:\"$it\"")
+        }
+
+        filter.docType?.takeIf { it.isNotBlank() }?.let {
+            clauses.add("doctype:\"$it\"")
+        }
+
+        return if (clauses.isEmpty()) "*:*" else clauses.joinToString(" AND ")
     }
 }

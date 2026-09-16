@@ -1,22 +1,22 @@
 package com.example.astroxplore.features.auth.ui
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -29,8 +29,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.astroxplore.R
+import com.example.astroxplore.core.ui.components.DynamicIslandError
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignupScreen(
     onSignupSuccess: () -> Unit,
@@ -44,356 +45,298 @@ fun SignupScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-    var affiliationType by remember { mutableStateOf("") }
-    var affiliationName by remember { mutableStateOf("") }
-    var country by remember { mutableStateOf("") }
-    var educationLevel by remember { mutableStateOf("") }
-    val selectedInterests = remember { mutableStateListOf<String>() }
-
-    var affiliationExpanded by remember { mutableStateOf(false) }
-    var countryExpanded by remember { mutableStateOf(false) }
-    var educationExpanded by remember { mutableStateOf(false) }
 
     val uiState by viewModel.uiState.collectAsState()
+    val darkTheme = isSystemInDarkTheme()
+
+    var showForm by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        showForm = true
+    }
 
     LaunchedEffect(uiState) {
         if (uiState is SignupUiState.Success) {
-            onSignupSuccess()
+            if (!(uiState as SignupUiState.Success).needsEmailConfirmation) {
+                onSignupSuccess()
+            }
         }
     }
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.2f),
-                        MaterialTheme.colorScheme.surface
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        // High-end Mesh Gradient Background
+        val gradientColor = MaterialTheme.colorScheme.secondary.copy(alpha = if (darkTheme) 0.3f else 0.1f)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .alpha(0.6f)
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(gradientColor, Color.Transparent),
+                        center = Offset(1000f, 1000f),
+                        radius = 2000f
                     )
                 )
-            )
-    ) {
+        )
+
         Scaffold(
             containerColor = Color.Transparent,
             topBar = {
-                TopAppBar(
-                    title = { Text(stringResource(R.string.signup)) },
-                    navigationIcon = {
-                        IconButton(onClick = onNavigateBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent
-                    )
-                )
-            }
-        ) { innerPadding ->
-            if (uiState is SignupUiState.Loading) {
-                LinearProgressIndicator(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(innerPadding)
-                )
-            }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.Top,
-                horizontalAlignment = Alignment.Start
-            ) {
-                Text(
-                    text = stringResource(R.string.sign_up_desc),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    OutlinedTextField(
-                        value = firstName,
-                        onValueChange = { firstName = it },
-                        label = { Text(stringResource(R.string.first_name)) },
-                        modifier = Modifier.weight(1f),
-                        shape = MaterialTheme.shapes.large,
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = lastName,
-                        onValueChange = { lastName = it },
-                        label = { Text(stringResource(R.string.last_name)) },
-                        modifier = Modifier.weight(1f),
-                        shape = MaterialTheme.shapes.large,
-                        singleLine = true
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = { email = it },
-                    label = { Text(stringResource(R.string.email)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                    shape = MaterialTheme.shapes.large,
-                    singleLine = true
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = { Text(stringResource(R.string.password)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-                    trailingIcon = {
-                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(
-                                imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                contentDescription = if (passwordVisible) "Hide password" else "Show password"
-                            )
-                        }
-                    },
-                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    shape = MaterialTheme.shapes.large,
-                    singleLine = true
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-                HorizontalDivider()
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Affiliation Dropdown
-                ExposedDropdownMenuBox(
-                    expanded = affiliationExpanded,
-                    onExpandedChange = { affiliationExpanded = !affiliationExpanded }
-                ) {
-                    OutlinedTextField(
-                        value = affiliationType,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text(stringResource(R.string.affiliation_type)) },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = affiliationExpanded) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-                        shape = MaterialTheme.shapes.large
-                    )
-                    ExposedDropdownMenu(
-                        expanded = affiliationExpanded,
-                        onDismissRequest = { affiliationExpanded = false }
-                    ) {
-                        viewModel.affiliationTypes.forEach { type ->
-                            DropdownMenuItem(
-                                text = { Text(type) },
-                                onClick = {
-                                    affiliationType = type
-                                    affiliationExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-
-                if (affiliationType != "Individual" && affiliationType.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    OutlinedTextField(
-                        value = affiliationName,
-                        onValueChange = { affiliationName = it },
-                        label = { Text(stringResource(R.string.affiliation_name)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.large,
-                        singleLine = true
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Country Dropdown
-                ExposedDropdownMenuBox(
-                    expanded = countryExpanded,
-                    onExpandedChange = { countryExpanded = !countryExpanded }
-                ) {
-                    OutlinedTextField(
-                        value = country,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text(stringResource(R.string.country)) },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = countryExpanded) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-                        shape = MaterialTheme.shapes.large
-                    )
-                    ExposedDropdownMenu(
-                        expanded = countryExpanded,
-                        onDismissRequest = { countryExpanded = false }
-                    ) {
-                        viewModel.countries.forEach { item ->
-                            DropdownMenuItem(
-                                text = { Text(item) },
-                                onClick = {
-                                    country = item
-                                    countryExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Education Level Dropdown
-                ExposedDropdownMenuBox(
-                    expanded = educationExpanded,
-                    onExpandedChange = { educationExpanded = !educationExpanded }
-                ) {
-                    OutlinedTextField(
-                        value = educationLevel,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text(stringResource(R.string.education_level)) },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = educationExpanded) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-                        shape = MaterialTheme.shapes.large
-                    )
-                    ExposedDropdownMenu(
-                        expanded = educationExpanded,
-                        onDismissRequest = { educationExpanded = false }
-                    ) {
-                        viewModel.educationLevels.forEach { level ->
-                            DropdownMenuItem(
-                                text = { Text(level) },
-                                onClick = {
-                                    educationLevel = level
-                                    educationExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-                Text(
-                    text = stringResource(R.string.research_interests),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    viewModel.researchInterests.forEach { interest ->
-                        FilterChip(
-                            selected = selectedInterests.contains(interest),
-                            onClick = {
-                                if (selectedInterests.contains(interest)) {
-                                    selectedInterests.remove(interest)
-                                } else {
-                                    selectedInterests.add(interest)
-                                }
-                            },
-                            label = { Text(interest) }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(40.dp))
-
-                Button(
-                    onClick = {
-                        viewModel.signup(
-                            email = email,
-                            password = password,
-                            firstName = firstName,
-                            lastName = lastName,
-                            affiliationType = affiliationType,
-                            affiliationName = affiliationName,
-                            country = country,
-                            educationLevel = educationLevel,
-                            interests = selectedInterests
-                        )
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    enabled = uiState !is SignupUiState.Loading &&
-                            email.isNotEmpty() && password.isNotEmpty() &&
-                            firstName.isNotEmpty() && lastName.isNotEmpty() &&
-                            country.isNotEmpty() && educationLevel.isNotEmpty(),
-                    shape = MaterialTheme.shapes.extraLarge
-                ) {
+                Column {
                     if (uiState is SignupUiState.Loading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(28.dp),
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            strokeWidth = 3.dp
-                        )
-                    } else {
-                        Text(
-                            text = stringResource(R.string.signup),
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = stringResource(R.string.already_have_account_prefix),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    TextButton(
-                        onClick = onNavigateToLogin
-                    ) {
-                        Text(
-                            text = stringResource(R.string.login),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold,
+                        LinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth().statusBarsPadding(),
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
-                }
-
-                if (uiState is SignupUiState.Error) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Surface(
-                        color = MaterialTheme.colorScheme.errorContainer,
-                        shape = MaterialTheme.shapes.medium,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = (uiState as SignupUiState.Error).message,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(12.dp),
-                            textAlign = TextAlign.Center
-                        )
-                    }
+                    TopAppBar(
+                        title = { },
+                        navigationIcon = {
+                            IconButton(onClick = onNavigateBack) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowBack, 
+                                    contentDescription = "Back",
+                                    tint = MaterialTheme.colorScheme.onBackground
+                                )
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                    )
                 }
             }
+        ) { innerPadding ->
+            Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+                if (uiState is SignupUiState.Success && (uiState as SignupUiState.Success).needsEmailConfirmation) {
+                    EmailConfirmationView(
+                        email = email,
+                        onNavigateToLogin = onNavigateToLogin
+                    )
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 24.dp),
+                        verticalArrangement = Arrangement.Top,
+                        horizontalAlignment = Alignment.Start
+                    ) {
+                        AnimatedVisibility(
+                            visible = showForm,
+                            enter = fadeIn(tween(1000)) + slideInVertically { it / 2 }
+                        ) {
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.signup),
+                                    style = MaterialTheme.typography.displayMedium.copy(
+                                        fontWeight = FontWeight.ExtraBold,
+                                        letterSpacing = (-2).sp
+                                    ),
+                                    color = MaterialTheme.colorScheme.onBackground
+                                )
+                                
+                                Text(
+                                    text = "Begin your academic career in the stars.",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                                )
+
+                                Spacer(modifier = Modifier.height(48.dp))
+
+                                // Immersive Form
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                    OutlinedTextField(
+                                        value = firstName,
+                                        onValueChange = { firstName = it },
+                                        label = { Text(stringResource(R.string.first_name), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)) },
+                                        modifier = Modifier.weight(1f),
+                                        shape = MaterialTheme.shapes.extraLarge,
+                                        singleLine = true,
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                                            unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+                                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                            unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f),
+                                            focusedContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
+                                            unfocusedContainerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f)
+                                        )
+                                    )
+                                    OutlinedTextField(
+                                        value = lastName,
+                                        onValueChange = { lastName = it },
+                                        label = { Text(stringResource(R.string.last_name), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)) },
+                                        modifier = Modifier.weight(1f),
+                                        shape = MaterialTheme.shapes.extraLarge,
+                                        singleLine = true,
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                                            unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+                                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                            unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f),
+                                            focusedContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
+                                            unfocusedContainerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f)
+                                        )
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                OutlinedTextField(
+                                    value = email,
+                                    onValueChange = { email = it },
+                                    label = { Text(stringResource(R.string.email), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)) },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                                    shape = MaterialTheme.shapes.extraLarge,
+                                    singleLine = true,
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                                        unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+                                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                        unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f),
+                                        focusedContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
+                                        unfocusedContainerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f)
+                                    )
+                                )
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                OutlinedTextField(
+                                    value = password,
+                                    onValueChange = { password = it },
+                                    label = { Text(stringResource(R.string.password), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)) },
+                                    trailingIcon = {
+                                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                            Icon(
+                                                imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                                contentDescription = "Toggle password",
+                                                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                                            )
+                                        }
+                                    },
+                                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                    shape = MaterialTheme.shapes.extraLarge,
+                                    singleLine = true,
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                                        unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+                                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                        unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f),
+                                        focusedContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
+                                        unfocusedContainerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f)
+                                    )
+                                )
+
+                                Spacer(modifier = Modifier.height(40.dp))
+
+                                Button(
+                                    onClick = {
+                                        viewModel.signup(
+                                            email = email,
+                                            password = password,
+                                            firstName = firstName,
+                                            lastName = lastName
+                                        )
+                                    },
+                                    modifier = Modifier.fillMaxWidth().height(64.dp),
+                                    enabled = uiState !is SignupUiState.Loading &&
+                                            email.isNotEmpty() && password.isNotEmpty() &&
+                                            firstName.isNotEmpty() && lastName.isNotEmpty(),
+                                    shape = MaterialTheme.shapes.extraLarge,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary
+                                    )
+                                ) {
+                                    AnimatedContent(targetState = uiState is SignupUiState.Loading, label = "loading") { isLoading ->
+                                        if (isLoading) {
+                                            CircularProgressIndicator(modifier = Modifier.size(28.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 3.dp)
+                                        } else {
+                                            Text(text = stringResource(R.string.signup), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(32.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Text(stringResource(R.string.already_have_account_prefix), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
+                                    TextButton(onClick = onNavigateToLogin) {
+                                        Text(stringResource(R.string.login), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(48.dp))
+                    }
+                }
+
+                DynamicIslandError(
+                    isVisible = uiState is SignupUiState.Error,
+                    message = if (uiState is SignupUiState.Error) stringResource((uiState as SignupUiState.Error).messageResId) else ""
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun EmailConfirmationView(
+    email: String,
+    onNavigateToLogin: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.MarkEmailRead,
+            contentDescription = null,
+            modifier = Modifier.size(100.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        Text(
+            text = "Check Your Email",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Black,
+            color = MaterialTheme.colorScheme.onBackground,
+            textAlign = TextAlign.Center
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Text(
+            text = "We've sent a verification link to:\n$email",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+            textAlign = TextAlign.Center
+        )
+        
+        Spacer(modifier = Modifier.height(48.dp))
+        
+        Button(
+            onClick = onNavigateToLogin,
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = MaterialTheme.shapes.extraLarge
+        ) {
+            Text("Back to Login", fontWeight = FontWeight.Bold)
         }
     }
 }

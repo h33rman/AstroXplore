@@ -10,7 +10,7 @@ sealed interface Screen {
     data object Groups : Screen
     
     @Serializable
-    data object Explore : Screen
+    data class Explore(val autofocus: Boolean = false) : Screen
     
     @Serializable
     data object Library : Screen
@@ -32,4 +32,7 @@ sealed interface Screen {
 
     @Serializable
     data object Signup : Screen
+
+    @Serializable
+    data object Interests : Screen
 }

@@ -49,4 +49,12 @@
     <string name="country">Pays</string>
     <string name="education_level">Niveau d\'éducation</string>
     <string name="research_interests">Centres d\'intérêt de recherche</string>
+
+    <!-- Error Messages -->
+    <string name="error_network">Problème de connexion réseau. Veuillez vérifier votre internet.</string>
+    <string name="error_invalid_credentials">Email ou mot de passe invalide.</string>
+    <string name="error_user_exists">Un compte avec cet email existe déjà.</string>
+    <string name="error_unknown">Une erreur est survenue. Veuillez réessayer plus tard.</string>
+    <string name="error_session_expired">Session expirée. Veuillez vous reconnecter.</string>
+    <string name="error_database">Échec de la synchronisation de vos données. Veuillez réessayer.</string>
 </resources>
