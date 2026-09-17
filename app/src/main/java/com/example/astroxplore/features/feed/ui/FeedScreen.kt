@@ -1,7 +1,8 @@
 package com.example.astroxplore.features.feed.ui
 
-import androidx.compose.animation.*
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,36 +24,46 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.example.astroxplore.MainViewModel
 import com.example.astroxplore.R
+import com.example.astroxplore.core.util.findActivity
+import com.example.astroxplore.features.feed.model.PaperModel
 import com.example.astroxplore.features.feed.ui.components.PaperCard
+import com.example.astroxplore.features.feed.ui.components.PaperCardSkeleton
+import com.example.astroxplore.features.feed.ui.components.PaperDetailsBottomSheet
+import kotlinx.coroutines.flow.collectLatest
 import java.text.SimpleDateFormat
 import java.util.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedScreen(
     modifier: Modifier = Modifier,
     viewModel: FeedViewModel = hiltViewModel(),
-    onSearchClick: () -> Unit = {}
+    mainViewModel: MainViewModel = hiltViewModel(LocalContext.current.findActivity()!!),
+    onSearchClick: () -> Unit = {},
+    onPaperClick: (String) -> Unit = {}
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val papers by viewModel.feedPapers.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val error by viewModel.error.collectAsState()
+    val savedPaperIds by viewModel.savedPaperIds.collectAsState()
+    
     val listState = rememberLazyListState()
     
-    // Social media scroll detection
-    val shouldLoadMore = remember {
-        derivedStateOf {
-            val totalItemsCount = listState.layoutInfo.totalItemsCount
-            val lastVisibleItemIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            totalItemsCount > 0 && lastVisibleItemIndex >= totalItemsCount - 3
+    // Bottom Sheet State
+    var selectedPaperForDetails by remember { mutableStateOf<PaperModel?>(null) }
+    var showAuthorsOnly by remember { mutableStateOf(false) }
+
+    // Listen for Scroll to Top Event
+    LaunchedEffect(Unit) {
+        mainViewModel.scrollToTopEvent.collectLatest {
+            listState.animateScrollToItem(0)
         }
     }
-
-    LaunchedEffect(shouldLoadMore.value) {
-        if (shouldLoadMore.value) {
-            viewModel.loadMore()
-        }
-    }
-
+    
     // Modern Collapsing Header Logic
     val scrollOffset = remember { derivedStateOf { listState.firstVisibleItemScrollOffset } }
     val firstItemIndex = remember { derivedStateOf { listState.firstVisibleItemIndex } }
@@ -62,91 +74,103 @@ fun FeedScreen(
         animationSpec = tween(300),
         label = "headerAlpha"
     )
-    
-    val searchBarTranslation by animateDpAsState(
-        targetValue = if (isScrolled.value) (-110).dp else 0.dp,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
-        label = "searchBarTranslation"
-    )
 
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // 1. Main List (Underneath Header)
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = 220.dp, bottom = 16.dp)
+        // Main Feed with Pull to Refresh
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = { viewModel.refresh() },
+            modifier = Modifier.fillMaxSize()
         ) {
-            when (val state = uiState) {
-                is FeedUiState.Loading -> {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = 250.dp, bottom = 16.dp)
+            ) {
+                if (papers.isEmpty() && isRefreshing) {
                     items(5) { PaperCardSkeleton() }
-                }
-                is FeedUiState.Success -> {
-                    items(state.papers, key = { it.bibcode }) { paper ->
-                        PaperCard(paper = paper)
-                    }
-                    if (state.isLastPage) {
-                        item { EndOfFeedMessage() }
-                    }
-                }
-                is FeedUiState.LoadingMore -> {
-                    items(state.currentPapers, key = { it.bibcode }) { paper ->
-                        PaperCard(paper = paper)
-                    }
-                    item {
-                        Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(modifier = Modifier.size(32.dp))
-                        }
-                    }
-                }
-                is FeedUiState.Error -> {
+                } else if (papers.isEmpty() && error != null) {
                     item {
                         Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(text = stringResource(state.messageResId), color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                            Text(text = stringResource(error!!), color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
                         }
+                    }
+                } else {
+                    items(papers, key = { it.bibcode }) { paper ->
+                        PaperCard(
+                            paper = paper,
+                            isSaved = savedPaperIds.contains(paper.bibcode),
+                            onSaveClick = { viewModel.toggleSavePaper(paper) },
+                            onTitleClick = { onPaperClick(paper.bibcode) },
+                            onReadMoreClick = {
+                                selectedPaperForDetails = paper
+                                showAuthorsOnly = false
+                            },
+                            onAuthorsClick = {
+                                selectedPaperForDetails = paper
+                                showAuthorsOnly = true
+                            }
+                        )
+                    }
+                    if (papers.isNotEmpty()) {
+                        item { EndOfFeedMessage() }
                     }
                 }
             }
         }
 
-        // 2. Immersive Header Overlay
+        // Immersive Header Overlay (Sticky Bar)
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            color = if (isScrolled.value) MaterialTheme.colorScheme.background else Color.Transparent,
-            tonalElevation = if (isScrolled.value) 4.dp else 0.dp,
-            shadowElevation = if (isScrolled.value) 8.dp else 0.dp
+            color = if (isScrolled.value) MaterialTheme.colorScheme.surface.copy(alpha = 0.95f) else Color.Transparent,
+            tonalElevation = if (isScrolled.value) 6.dp else 0.dp,
+            shadowElevation = if (isScrolled.value) 12.dp else 0.dp
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(bottom = 16.dp)
+                    .padding(bottom = 12.dp)
             ) {
-                // Greeting & Discovery Title (Fades Out)
+                // Greeting & Discovery Title
                 Box(
                     modifier = Modifier
                         .graphicsLayer { 
                             alpha = headerAlpha
                             translationY = - (1f - headerAlpha) * 30f
                         }
-                        .height(if (isScrolled.value) 0.dp else 110.dp)
+                        .animateContentSize()
                 ) {
                     if (headerAlpha > 0.05f) {
                         DiscoveryHeader()
                     }
                 }
 
-                // Sticky Search Bar (Stays)
+                // Sticky Search Bar
                 Box(
                     modifier = Modifier
-                        .padding(horizontal = 20.dp, vertical = 4.dp)
+                        .padding(horizontal = 20.dp, vertical = 6.dp)
                 ) {
-                    SearchBar(onSearchClick = onSearchClick)
+                    SearchBar(
+                        onSearchClick = onSearchClick,
+                        isSticky = isScrolled.value
+                    )
                 }
             }
+        }
+
+        // Paper Details Bottom Sheet
+        if (selectedPaperForDetails != null) {
+            PaperDetailsBottomSheet(
+                paper = selectedPaperForDetails!!,
+                showAuthorsOnly = showAuthorsOnly,
+                onDismiss = { selectedPaperForDetails = null },
+                onNavigateToDetails = onPaperClick
+            )
         }
     }
 }
@@ -161,7 +185,7 @@ fun DiscoveryHeader() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 8.dp)
+            .padding(horizontal = 20.dp, vertical = 4.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -197,77 +221,67 @@ fun DiscoveryHeader() {
             }
         }
         
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
         
         Text(
             text = stringResource(R.string.discovery),
             style = MaterialTheme.typography.displaySmall.copy(
                 fontWeight = FontWeight.Black,
-                letterSpacing = (-1).sp
+                letterSpacing = (-1).sp,
+                lineHeight = 44.sp
             ),
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(bottom = 8.dp)
         )
     }
 }
 
 @Composable
-fun SearchBar(onSearchClick: () -> Unit) {
+fun SearchBar(onSearchClick: () -> Unit, isSticky: Boolean = false) {
+    val barHeight by animateDpAsState(
+        targetValue = if (isSticky) 46.dp else 56.dp,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "barHeight"
+    )
+    
+    val containerColor = if (isSticky) {
+        MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+    }
+
     Surface(
         onClick = onSearchClick,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+        color = containerColor,
         shape = MaterialTheme.shapes.extraLarge,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(barHeight),
+        border = if (isSticky) {
+            BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+        } else {
+            BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+        },
+        tonalElevation = if (isSticky) 2.dp else 0.dp
     ) {
         Row(
             modifier = Modifier
-                .padding(horizontal = 20.dp, vertical = 14.dp),
+                .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 Icons.Default.Search,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(if (isSticky) 18.dp else 22.dp)
             )
             Spacer(modifier = Modifier.width(12.dp))
             Text(
-                text = "Search 10M+ papers...",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                text = "Search 10M+ astrophysics papers...",
+                style = if (isSticky) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                fontWeight = if (isSticky) FontWeight.Medium else FontWeight.Normal
             )
-        }
-    }
-}
-
-@Composable
-fun PaperCardSkeleton() {
-    val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
-    val alpha by infiniteTransition.animateFloat(
-        initialValue = 0.2f,
-        targetValue = 0.4f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "alpha"
-    )
-
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp, horizontal = 16.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = alpha),
-        shape = MaterialTheme.shapes.extraLarge
-    ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Box(modifier = Modifier.size(80.dp, 16.dp).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = alpha), MaterialTheme.shapes.small))
-            Spacer(modifier = Modifier.height(16.dp))
-            Box(modifier = Modifier.fillMaxWidth().height(28.dp).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = alpha), MaterialTheme.shapes.small))
-            Spacer(modifier = Modifier.height(8.dp))
-            Box(modifier = Modifier.fillMaxWidth(0.6f).height(28.dp).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = alpha), MaterialTheme.shapes.small))
-            Spacer(modifier = Modifier.height(16.dp))
-            Box(modifier = Modifier.fillMaxWidth().height(60.dp).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = alpha), MaterialTheme.shapes.small))
-            Spacer(modifier = Modifier.height(20.dp))
-            Box(modifier = Modifier.size(120.dp, 32.dp).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = alpha), MaterialTheme.shapes.small))
         }
     }
 }

@@ -24,20 +24,24 @@ class ProfileViewModel @Inject constructor(
     private val _availableKeywords = MutableStateFlow<List<String>>(emptyList())
 
     val uiState: StateFlow<ProfileUiState> = combine(
-        settingsRepository.themeMode,
-        settingsRepository.dynamicColorEnabled,
-        settingsRepository.language,
+        combine(
+            settingsRepository.themeMode,
+            settingsRepository.dynamicColorEnabled,
+            settingsRepository.language
+        ) { themeMode, dynamicColor, language ->
+            Triple(themeMode, dynamicColor, language)
+        },
         _userProfile,
         _userInterests,
         _availableKeywords
-    ) { args ->
+    ) { settings, profile, interests, keywords ->
         ProfileUiState(
-            themeMode = args[0] as ThemeMode,
-            dynamicColorEnabled = args[1] as Boolean,
-            language = args[2] as String,
-            profile = args[3] as? ProfileModel,
-            interests = args[4] as List<String>,
-            availableKeywords = args[5] as List<String>
+            themeMode = settings.first,
+            dynamicColorEnabled = settings.second,
+            language = settings.third,
+            profile = profile,
+            interests = interests,
+            availableKeywords = keywords
         )
     }.stateIn(
         scope = viewModelScope,

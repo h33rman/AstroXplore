@@ -35,4 +35,7 @@ sealed interface Screen {
 
     @Serializable
     data object Interests : Screen
+
+    @Serializable
+    data class PaperDetails(val bibcode: String) : Screen
 }

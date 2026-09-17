@@ -112,7 +112,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AstroXploreMain(
     sessionStatus: SessionStatus = SessionStatus.Initializing,
-    isOnboarded: Boolean? = null
+    isOnboarded: Boolean? = null,
+    mainViewModel: MainViewModel = hiltViewModel()
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -178,7 +179,7 @@ fun AstroXploreMain(
             ),
             navigationSuiteItems = {
                 AppDestinations.entries.forEach { destination ->
-                    val isSelected = currentDestination?.hasRoute(destination.screen::class) ?: false
+                    val isSelected = currentDestination.hasRoute(destination.screen::class)
                     item(
                         icon = {
                             AnimatedContent(
@@ -205,12 +206,16 @@ fun AstroXploreMain(
                         },
                         selected = isSelected,
                         onClick = {
-                            navController.navigate(destination.screen) {
-                                popUpTo(navController.graph.startDestinationId) {
-                                    saveState = true
+                            if (isSelected && destination == AppDestinations.FEED) {
+                                mainViewModel.triggerScrollToTop()
+                            } else {
+                                navController.navigate(destination.screen) {
+                                    popUpTo(navController.graph.startDestinationId) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
                             }
                         },
                         colors = navSuiteItemColors

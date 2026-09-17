@@ -15,6 +15,8 @@ import androidx.navigation.toRoute
 import com.example.astroxplore.features.auth.ui.LoginScreen
 import com.example.astroxplore.features.auth.ui.SignupScreen
 import com.example.astroxplore.features.feed.ui.FeedScreen
+import com.example.astroxplore.features.feed.ui.PaperDetailsScreen
+import com.example.astroxplore.features.library.ui.LibraryScreen
 import com.example.astroxplore.features.onboarding.ui.OnboardingScreen
 import com.example.astroxplore.features.profile.ui.InterestsScreen
 import com.example.astroxplore.features.profile.ui.LanguageScreen
@@ -45,6 +47,9 @@ fun AppNavGraph(
             FeedScreen(
                 onSearchClick = {
                     navController.navigate(Screen.Explore(autofocus = true))
+                },
+                onPaperClick = { bibcode ->
+                    navController.navigate(Screen.PaperDetails(bibcode))
                 }
             )
         }
@@ -53,10 +58,19 @@ fun AppNavGraph(
         }
         composable<Screen.Explore> { backStackEntry ->
             val explore = backStackEntry.toRoute<Screen.Explore>()
-            ExploreScreen(autofocus = explore.autofocus)
+            ExploreScreen(
+                autofocus = explore.autofocus,
+                onPaperClick = { bibcode ->
+                    navController.navigate(Screen.PaperDetails(bibcode))
+                }
+            )
         }
         composable<Screen.Library> {
-            PlaceholderScreen("Library")
+            LibraryScreen(
+                onPaperClick = { bibcode ->
+                    navController.navigate(Screen.PaperDetails(bibcode))
+                }
+            )
         }
         composable<Screen.Profile> {
             ProfileScreen(
@@ -120,6 +134,13 @@ fun AppNavGraph(
                     popUpTo(Screen.Onboarding) { inclusive = true }
                 }
             })
+        }
+        composable<Screen.PaperDetails> { backStackEntry ->
+            val details = backStackEntry.toRoute<Screen.PaperDetails>()
+            PaperDetailsScreen(
+                bibcode = details.bibcode,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
     }
 }

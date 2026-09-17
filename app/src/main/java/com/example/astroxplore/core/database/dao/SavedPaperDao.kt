@@ -1,0 +1,20 @@
+package com.example.astroxplore.core.database.dao
+
+import androidx.room.*
+import com.example.astroxplore.core.database.entity.SavedPaperEntity
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface SavedPaperDao {
+    @Query("SELECT * FROM saved_papers ORDER BY savedAt DESC")
+    fun getAllSavedPapers(): Flow<List<SavedPaperEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun savePaper(paper: SavedPaperEntity)
+
+    @Query("DELETE FROM saved_papers WHERE bibcode = :bibcode")
+    suspend fun deletePaper(bibcode: String)
+
+    @Query("SELECT EXISTS(SELECT * FROM saved_papers WHERE bibcode = :bibcode)")
+    fun isPaperSaved(bibcode: String): Flow<Boolean>
+}

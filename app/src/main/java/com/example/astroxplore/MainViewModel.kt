@@ -2,6 +2,7 @@ package com.example.astroxplore
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.astroxplore.core.util.NavigationSignal
 import com.example.astroxplore.features.auth.data.AuthRepository
 import com.example.astroxplore.features.profile.data.ProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -13,7 +14,8 @@ import javax.inject.Inject
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val profileRepository: ProfileRepository
+    private val profileRepository: ProfileRepository,
+    private val navigationSignal: NavigationSignal
 ) : ViewModel() {
     val sessionStatus: StateFlow<SessionStatus> = authRepository.sessionStatus
         .stateIn(
@@ -24,6 +26,8 @@ class MainViewModel @Inject constructor(
 
     private val _isOnboarded = MutableStateFlow<Boolean?>(null)
     val isOnboarded: StateFlow<Boolean?> = _isOnboarded.asStateFlow()
+
+    val scrollToTopEvent = navigationSignal.scrollToTop
 
     init {
         viewModelScope.launch {
@@ -36,5 +40,9 @@ class MainViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun triggerScrollToTop() {
+        navigationSignal.onScrollToTop()
     }
 }

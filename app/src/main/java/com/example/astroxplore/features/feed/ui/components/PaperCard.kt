@@ -1,5 +1,7 @@
 package com.example.astroxplore.features.feed.ui.components
 
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -8,13 +10,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -24,10 +31,14 @@ import com.example.astroxplore.features.feed.model.PaperModel
 fun PaperCard(
     paper: PaperModel,
     modifier: Modifier = Modifier,
-    onLikeClick: () -> Unit = {},
-    onGroupClick: () -> Unit = {},
+    isSaved: Boolean = false,
     onSaveClick: () -> Unit = {},
-    onShareClick: () -> Unit = {}
+    onShareClick: () -> Unit = {},
+    onCiteClick: () -> Unit = {},
+    onMoreClick: () -> Unit = {},
+    onTitleClick: () -> Unit = {},
+    onReadMoreClick: () -> Unit = {},
+    onAuthorsClick: () -> Unit = {}
 ) {
     Surface(
         modifier = modifier
@@ -35,49 +46,44 @@ fun PaperCard(
             .padding(vertical = 10.dp, horizontal = 16.dp),
         color = MaterialTheme.colorScheme.surface,
         shape = MaterialTheme.shapes.extraLarge,
-        tonalElevation = 1.dp,
-        shadowElevation = 2.dp
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+        )
     ) {
         Column(modifier = Modifier.padding(24.dp)) {
-            // Header Row: Category and Date
+            // Header Row: Category (Start) and Date (End)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = paper.category.uppercase(),
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 1.2.sp
-                        ),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Box(modifier = Modifier.size(3.dp).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
-                        CircleShape
-                    ))
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = paper.dateDisplay,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    )
-                }
+                Text(
+                    text = paper.category.uppercase(),
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.2.sp
+                    ),
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
                 
-                IconButton(onClick = {}, modifier = Modifier.size(24.dp)) {
-                    Icon(
-                        Icons.Default.MoreHoriz,
-                        contentDescription = "More",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                    )
-                }
+                Text(
+                    text = paper.dateDisplay,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    maxLines = 1,
+                    textAlign = TextAlign.End
+                )
             }
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Title
+            // Title - Clickable
             Text(
                 text = paper.title,
                 style = MaterialTheme.typography.headlineSmall.copy(
@@ -87,30 +93,39 @@ fun PaperCard(
                 ),
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 3,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.clickable { onTitleClick() }
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Abstract
+            // Abstract with Justify
             Text(
                 text = paper.abstractText,
                 style = MaterialTheme.typography.bodyLarge.copy(
                     lineHeight = 24.sp,
-                    letterSpacing = 0.2.sp
+                    letterSpacing = 0.2.sp,
+                    textAlign = TextAlign.Justify
                 ),
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f),
                 maxLines = 4,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onReadMoreClick() }
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // Author Badge
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // Author Badge and "and others"
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Surface(
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
-                    shape = MaterialTheme.shapes.medium
+                    shape = MaterialTheme.shapes.medium,
+                    onClick = onAuthorsClick
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -127,66 +142,121 @@ fun PaperCard(
                             text = paper.authors.firstOrNull()?.split(",")?.firstOrNull() ?: "Researcher",
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.widthIn(max = 120.dp)
                         )
                     }
                 }
                 if (paper.authors.size > 1) {
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = "& ${paper.authors.size - 1} colleagues",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        text = "and others",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        ),
+                        modifier = Modifier
+                            .clickable { onAuthorsClick() }
+                            .padding(vertical = 4.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             
             HorizontalDivider(
                 thickness = 0.5.dp,
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
             )
             
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // Action Bar
+            // Action Bar: Citation, Save, Share | More
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Citation
                     InteractionButton(
-                        icon = Icons.Outlined.FavoriteBorder,
+                        icon = Icons.Outlined.FormatQuote,
+                        activeColor = MaterialTheme.colorScheme.secondary,
+                        isActive = false,
                         label = paper.citationCount.toString(),
-                        onClick = onLikeClick
+                        onClick = onCiteClick
                     )
+                    
                     Spacer(modifier = Modifier.width(20.dp))
+                    
+                    // Save
                     InteractionButton(
-                        icon = Icons.Outlined.BookmarkBorder,
+                        icon = if (isSaved) Icons.Default.Bookmark else Icons.Outlined.BookmarkBorder,
+                        activeColor = MaterialTheme.colorScheme.primary,
+                        isActive = isSaved,
                         label = "Save",
                         onClick = onSaveClick
                     )
-                }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    InteractionButton(
-                        icon = Icons.Outlined.Groups,
-                        label = "Group",
-                        onClick = onGroupClick
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    IconButton(onClick = onShareClick, modifier = Modifier.size(36.dp)) {
+                    Spacer(modifier = Modifier.width(20.dp))
+
+                    // Share
+                    IconButton(onClick = onShareClick, modifier = Modifier.size(32.dp)) {
                         Icon(
-                            Icons.Outlined.IosShare,
+                            imageVector = Icons.Default.Share,
                             contentDescription = "Share",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                             modifier = Modifier.size(22.dp)
                         )
                     }
                 }
+
+                // More Action
+                IconButton(onClick = onMoreClick, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        Icons.Default.MoreHoriz,
+                        contentDescription = "More",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
+        }
+    }
+}
+
+@Composable
+fun PaperCardSkeleton() {
+    val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.2f,
+        targetValue = 0.4f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "alpha"
+    )
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp, horizontal = 16.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = alpha),
+        shape = MaterialTheme.shapes.extraLarge
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Box(modifier = Modifier.size(80.dp, 16.dp).clip(MaterialTheme.shapes.small).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = alpha)))
+            Spacer(modifier = Modifier.height(16.dp))
+            Box(modifier = Modifier.fillMaxWidth().height(28.dp).clip(MaterialTheme.shapes.small).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = alpha)))
+            Spacer(modifier = Modifier.height(8.dp))
+            Box(modifier = Modifier.fillMaxWidth(0.6f).height(28.dp).clip(MaterialTheme.shapes.small).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = alpha)))
+            Spacer(modifier = Modifier.height(16.dp))
+            Box(modifier = Modifier.fillMaxWidth().height(60.dp).clip(MaterialTheme.shapes.small).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = alpha)))
+            Spacer(modifier = Modifier.height(20.dp))
+            Box(modifier = Modifier.size(120.dp, 32.dp).clip(MaterialTheme.shapes.small).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = alpha)))
         }
     }
 }
@@ -195,6 +265,8 @@ fun PaperCard(
 fun InteractionButton(
     icon: ImageVector,
     label: String,
+    isActive: Boolean = false,
+    activeColor: Color = MaterialTheme.colorScheme.primary,
     onClick: () -> Unit
 ) {
     Row(
@@ -204,14 +276,14 @@ fun InteractionButton(
         Icon(
             imageVector = icon,
             contentDescription = label,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+            tint = if (isActive) activeColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
             modifier = Modifier.size(22.dp)
         )
         Spacer(modifier = Modifier.width(6.dp))
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+            color = if (isActive) activeColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
             fontWeight = FontWeight.Bold
         )
     }
@@ -223,11 +295,12 @@ fun PaperCardPreview() {
     PaperCard(
         paper = PaperModel(
             bibcode = "2027arXiv270112345G",
-            rawTitles = listOf("Reconstruction of a dark energy model for the Dirac-Born-Infeld scalar field with the Hubble and DESI data via Gaussian process"),
-            abstractText = "In this study, we reconstruct the dark energy (DE) as a Dirac-Born-Infeld (DBI) scalar field from the Hubble dataset (32 CC + 26 BAO) and the DESI dataset using...",
-            authors = listOf("Ghosh, Sayantan", "Gadbail, Gaurav N.", "Sahoo, P. K.", "Bamba"),
-            keywords = listOf("Dark Energy"),
+            rawTitles = listOf("Very High Precision Astrometry for Exoplanets and Dark Matter with the Habitable Worlds Observatory"),
+            abstractText = "Astrometry, one of the oldest branches of astronomy, has been revolutionized by missions like Hipparcos and especially Gaia, which mapped billions of stars with extraordinary precision...",
+            authors = listOf("Malbet", "Labadie", "Leger", "Shao", "Gould"),
+            keywords = listOf("INSTRUMENTATION AND METHODS FOR ASTROPHYSICS"),
             rawPubDate = "2027-01-01"
-        )
+        ),
+        isSaved = false
     )
 }

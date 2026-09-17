@@ -4,14 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.astroxplore.core.network.NasaAdsQueryBuilder
 import com.example.astroxplore.core.util.ErrorMapper
+import com.example.astroxplore.core.util.NavigationSignal
 import com.example.astroxplore.features.auth.data.AuthRepository
 import com.example.astroxplore.features.feed.data.PaperRepository
 import com.example.astroxplore.features.feed.model.PaperModel
+import com.example.astroxplore.features.library.data.LibraryRepository
 import com.example.astroxplore.features.profile.data.ProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -19,72 +19,72 @@ import javax.inject.Inject
 class FeedViewModel @Inject constructor(
     private val paperRepository: PaperRepository,
     private val profileRepository: ProfileRepository,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val libraryRepository: LibraryRepository,
+    private val navigationSignal: NavigationSignal
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow<FeedUiState>(FeedUiState.Loading)
-    val uiState: StateFlow<FeedUiState> = _uiState.asStateFlow()
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing = _isRefreshing.asStateFlow()
 
-    private val _categories = listOf("For You", "Astrophysics", "Galaxies", "Cosmology")
-    val categories: List<String> = _categories
+    private val _error = MutableStateFlow<Int?>(null)
+    val error = _error.asStateFlow()
 
-    private val _selectedCategory = MutableStateFlow(_categories[0])
+    private val _selectedCategory = MutableStateFlow("For You")
     val selectedCategory: StateFlow<String> = _selectedCategory.asStateFlow()
 
-    private var currentPage = 0
-    private val pageSize = 10
-    private var isLastPage = false
-    private val currentPapers = mutableListOf<PaperModel>()
+    val scrollToTopEvent = navigationSignal.scrollToTop
+
+    private val _savedPaperIds = MutableStateFlow<Set<String>>(emptySet())
+    val savedPaperIds: StateFlow<Set<String>> = _savedPaperIds.asStateFlow()
+
+    // Offline-First Feed: Reactively observe the database
+    val feedPapers: StateFlow<List<PaperModel>> = paperRepository.getCachedFeed()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
     init {
-        fetchPapers(_selectedCategory.value)
-    }
-
-    fun selectCategory(category: String) {
-        if (_selectedCategory.value == category) return
-        _selectedCategory.value = category
-        currentPage = 0
-        isLastPage = false
-        currentPapers.clear()
-        fetchPapers(category)
-    }
-
-    fun loadMore() {
-        val state = uiState.value
-        if (state is FeedUiState.LoadingMore || isLastPage) return
-        currentPage++
-        fetchPapers(_selectedCategory.value, isLoadMore = true)
-    }
-
-    private fun fetchPapers(category: String, isLoadMore: Boolean = false) {
+        loadSavedPapers()
+        
+        // Initial load: refresh if empty
         viewModelScope.launch {
-            if (isLoadMore) {
-                _uiState.value = FeedUiState.LoadingMore(currentPapers.toList())
-            } else if (currentPapers.isEmpty()) {
-                _uiState.value = FeedUiState.Loading
+            feedPapers.collect {
+                if (it.isEmpty() && !_isRefreshing.value) {
+                    refresh()
+                }
             }
+        }
+    }
 
+    private fun loadSavedPapers() {
+        viewModelScope.launch {
+            libraryRepository.getSavedPapers().collect { papers ->
+                _savedPaperIds.value = papers.map { it.bibcode }.toSet()
+            }
+        }
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            _error.value = null
             try {
-                val query = buildQuery(category)
-                val newPapers = paperRepository.getPapersByQuery(
-                    query = query,
-                    page = currentPage,
-                    pageSize = pageSize
-                )
-
-                if (newPapers.size < pageSize) {
-                    isLastPage = true
-                }
-
-                currentPapers.addAll(newPapers)
-                _uiState.value = FeedUiState.Success(currentPapers.toList(), isLastPage)
+                val query = buildQuery(_selectedCategory.value)
+                paperRepository.refreshFeed(query)
             } catch (e: Exception) {
-                if (isLoadMore) {
-                    _uiState.value = FeedUiState.Success(currentPapers.toList(), isLastPage)
-                } else {
-                    _uiState.value = FeedUiState.Error(ErrorMapper.mapToMessage(e))
-                }
+                _error.value = ErrorMapper.mapToMessage(e)
+            } finally {
+                _isRefreshing.value = false
             }
+        }
+    }
+
+    fun toggleSavePaper(paper: PaperModel) {
+        viewModelScope.launch {
+            libraryRepository.toggleSave(paper)
         }
     }
 
@@ -95,17 +95,7 @@ class FeedViewModel @Inject constructor(
                 val prefs = userId?.let { profileRepository.getUserPreferences(it) } ?: emptyList()
                 NasaAdsQueryBuilder.buildPreferenceQuery(prefs)
             }
-            "Astrophysics" -> "keyword:astrophysics AND property:eprint"
-            "Galaxies" -> "keyword:galaxies AND property:eprint"
-            "Cosmology" -> "keyword:cosmology AND property:eprint"
             else -> "keyword:\"$category\" AND property:eprint"
         }
     }
-}
-
-sealed interface FeedUiState {
-    data object Loading : FeedUiState
-    data class LoadingMore(val currentPapers: List<PaperModel>) : FeedUiState
-    data class Success(val papers: List<PaperModel>, val isLastPage: Boolean) : FeedUiState
-    data class Error(val messageResId: Int) : FeedUiState
 }

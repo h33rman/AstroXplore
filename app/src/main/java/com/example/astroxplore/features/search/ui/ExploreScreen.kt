@@ -1,280 +1,377 @@
 package com.example.astroxplore.features.search.ui
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.Explore
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.astroxplore.R
+import com.example.astroxplore.features.feed.model.PaperModel
 import com.example.astroxplore.features.feed.ui.components.PaperCard
+import com.example.astroxplore.features.feed.ui.components.PaperDetailsBottomSheet
+import com.example.astroxplore.features.feed.ui.components.PaperCardSkeleton
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExploreScreen(
-    modifier: Modifier = Modifier,
+    autofocus: Boolean = false,
     viewModel: ExploreViewModel = hiltViewModel(),
-    autofocus: Boolean = false
+    onPaperClick: (String) -> Unit = {}
 ) {
-    val searchQuery by viewModel.searchQuery.collectAsState()
-    val searchFilter by viewModel.searchFilter.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
+    val query by viewModel.searchQuery.collectAsState()
+    val filter by viewModel.searchFilter.collectAsState()
+    val savedPaperIds by viewModel.savedPaperIds.collectAsState()
+    val suggestedKeywords by viewModel.suggestedKeywords.collectAsState()
     
-    var showFilters by remember { mutableStateOf(false) }
-    val focusRequester = remember { FocusRequester() }
+    var showFilterSheet by remember { mutableStateOf(false) }
+    var selectedPaperForDetails by remember { mutableStateOf<PaperModel?>(null) }
+    var showAuthorsOnly by remember { mutableStateOf(false) }
 
-    LaunchedEffect(autofocus) {
-        if (autofocus) {
-            focusRequester.requestFocus()
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { 
+                    Text(
+                        "Explore Universe", 
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = (-0.5).sp
+                    ) 
+                },
+                actions = {
+                    BadgedBox(
+                        badge = {
+                            if (filter.isActive()) {
+                                Badge(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.offset(x = (-4).dp, y = 4.dp)
+                                )
+                            }
+                        }
+                    ) {
+                        IconButton(onClick = { showFilterSheet = true }) {
+                            Icon(
+                                Icons.Outlined.Tune, 
+                                contentDescription = "Advanced Filters",
+                                tint = if (filter.isActive()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+            )
         }
-    }
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-    ) {
-        SearchBar(
-            query = searchQuery,
-            onQueryChange = { viewModel.onQueryChange(it) },
-            onFilterClick = { showFilters = true },
-            modifier = Modifier.focusRequester(focusRequester)
-        )
-
-        FilterChips(
-            filter = searchFilter,
-            onRemoveFilter = { viewModel.updateFilter(it) },
-            onClearAll = { viewModel.clearFilters() }
-        )
-
-        when (val state = uiState) {
-            is ExploreUiState.Idle -> {
-                EmptyExploreState()
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            // Premium Search Field
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                shape = MaterialTheme.shapes.extraLarge,
+                border = BorderStroke(
+                    1.dp, 
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
+                )
+            ) {
+                TextField(
+                    value = query,
+                    onValueChange = { viewModel.onQueryChange(it) },
+                    placeholder = { 
+                        Text(
+                            "Title, author, bibcode...", 
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        ) 
+                    },
+                    leadingIcon = { 
+                        Icon(
+                            Icons.Default.Search, 
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        ) 
+                    },
+                    trailingIcon = {
+                        if (query.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.onQueryChange("") }) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear", modifier = Modifier.size(20.dp))
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        cursorColor = MaterialTheme.colorScheme.primary
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
-            is ExploreUiState.Loading -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            }
-            is ExploreUiState.Success -> {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 16.dp)
-                ) {
-                    items(state.results) { paper ->
-                        PaperCard(paper = paper)
+
+            // Results Content
+            Box(modifier = Modifier.fillMaxSize()) {
+                AnimatedContent(
+                    targetState = uiState,
+                    transitionSpec = {
+                        fadeIn(tween(300)) togetherWith fadeOut(tween(300))
+                    },
+                    label = "search_results"
+                ) { state ->
+                    when (state) {
+                        ExploreUiState.Idle -> SearchIdleState(
+                            suggestedKeywords = suggestedKeywords,
+                            onKeywordClick = { viewModel.onQueryChange(it) }
+                        )
+                        ExploreUiState.Loading -> {
+                            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                                items(5) { PaperCardSkeleton() }
+                            }
+                        }
+                        is ExploreUiState.Success -> {
+                            if (state.results.isEmpty()) {
+                                EmptyResultsState()
+                            } else {
+                                Column {
+                                    // Merged Sorting & Count Row
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 20.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        // Count
+                                        Text(
+                                            text = "${state.results.size} Results",
+                                            style = MaterialTheme.typography.labelLarge,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                            fontWeight = FontWeight.Bold
+                                        )
+
+                                        // Sorting Chips
+                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            SortBy.entries.forEach { sortBy ->
+                                                val isSelected = filter.sortBy == sortBy
+                                                FilterChip(
+                                                    selected = isSelected,
+                                                    onClick = { viewModel.setSortBy(sortBy) },
+                                                    label = { 
+                                                        Text(
+                                                            text = sortBy.displayName,
+                                                            style = MaterialTheme.typography.labelMedium
+                                                        ) 
+                                                    },
+                                                    shape = MaterialTheme.shapes.medium,
+                                                    colors = FilterChipDefaults.filterChipColors(
+                                                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    ),
+                                                    border = FilterChipDefaults.filterChipBorder(
+                                                        borderColor = Color.Transparent,
+                                                        selectedBorderColor = Color.Transparent,
+                                                        enabled = true,
+                                                        selected = isSelected
+                                                    )
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    LazyColumn(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentPadding = PaddingValues(bottom = 24.dp)
+                                    ) {
+                                        items(state.results, key = { it.bibcode }) { paper ->
+                                            PaperCard(
+                                                paper = paper,
+                                                isSaved = savedPaperIds.contains(paper.bibcode),
+                                                onSaveClick = { viewModel.toggleSavePaper(paper) },
+                                                onTitleClick = { onPaperClick(paper.bibcode) },
+                                                onReadMoreClick = {
+                                                    selectedPaperForDetails = paper
+                                                    showAuthorsOnly = false
+                                                },
+                                                onAuthorsClick = {
+                                                    selectedPaperForDetails = paper
+                                                    showAuthorsOnly = true
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        is ExploreUiState.Error -> ErrorState(stringResource(state.messageResId))
                     }
                 }
             }
-            is ExploreUiState.Error -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = stringResource(state.messageResId),
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(16.dp),
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
         }
     }
 
-    if (showFilters) {
+    if (showFilterSheet) {
         FilterBottomSheet(
-            filter = searchFilter,
-            onFilterChange = { viewModel.updateFilter(it) },
-            onDismiss = { showFilters = false }
+            filter = filter,
+            onDismiss = { showFilterSheet = false },
+            onApply = { viewModel.updateFilter(it) },
+            onClear = { viewModel.clearFilters() }
+        )
+    }
+
+    if (selectedPaperForDetails != null) {
+        PaperDetailsBottomSheet(
+            paper = selectedPaperForDetails!!,
+            showAuthorsOnly = showAuthorsOnly,
+            onDismiss = { selectedPaperForDetails = null },
+            onNavigateToDetails = onPaperClick
         )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun SearchBar(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    onFilterClick: () -> Unit,
-    modifier: Modifier = Modifier
+fun SearchIdleState(
+    suggestedKeywords: List<String>,
+    onKeywordClick: (String) -> Unit
 ) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        shape = MaterialTheme.shapes.extraLarge,
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        tonalElevation = 4.dp
-    ) {
-        TextField(
-            value = query,
-            onValueChange = onQueryChange,
-            placeholder = { 
-                Text(
-                    stringResource(R.string.search_placeholder),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                ) 
-            },
-            modifier = Modifier.fillMaxWidth(),
-            leadingIcon = { 
-                Icon(
-                    Icons.Default.Search, 
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                ) 
-            },
-            trailingIcon = {
-                IconButton(onClick = onFilterClick) {
-                    Icon(
-                        Icons.Outlined.Tune, 
-                        contentDescription = "Filter",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            },
-            singleLine = true,
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                disabledContainerColor = Color.Transparent,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent
-            )
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun FilterChips(
-    filter: SearchFilter,
-    onRemoveFilter: (SearchFilter) -> Unit,
-    onClearAll: () -> Unit
-) {
-    if (!filter.isActive()) return
-
-    LazyRow(
+    Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 8.dp),
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .fillMaxSize()
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        item {
-            TextButton(onClick = onClearAll) {
-                Text("Clear All", style = MaterialTheme.typography.labelMedium)
+        Spacer(modifier = Modifier.height(40.dp))
+        
+        Surface(
+            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
+            shape = CircleShape,
+            modifier = Modifier.size(100.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    Icons.Outlined.AutoMode,
+                    contentDescription = null,
+                    modifier = Modifier.size(50.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
-        }
-
-        if (filter.refereedOnly) {
-            filterChipItem("Refereed") { onRemoveFilter(filter.copy(refereedOnly = false)) }
-        }
-        if (filter.isOpenAccess) {
-            filterChipItem("Open Access") { onRemoveFilter(filter.copy(isOpenAccess = false)) }
-        }
-        if (filter.hasData) {
-            filterChipItem("Has Data") { onRemoveFilter(filter.copy(hasData = false)) }
-        }
-
-        filter.yearRange?.let { range ->
-            filterChipItem("Year: ${range.first}-${range.last}") { onRemoveFilter(filter.copy(yearRange = null)) }
-        }
-
-        filter.bibstem?.takeIf { it.isNotBlank() }?.let {
-            filterChipItem("Journal: $it") { onRemoveFilter(filter.copy(bibstem = null)) }
-        }
-
-        filter.author?.takeIf { it.isNotBlank() }?.let {
-            filterChipItem("Author: $it") { onRemoveFilter(filter.copy(author = null)) }
-        }
-
-        filter.firstAuthor?.takeIf { it.isNotBlank() }?.let {
-            filterChipItem("1st Author: $it") { onRemoveFilter(filter.copy(firstAuthor = null)) }
-        }
-
-        filter.orcid?.takeIf { it.isNotBlank() }?.let {
-            filterChipItem("ORCiD: $it") { onRemoveFilter(filter.copy(orcid = null)) }
-        }
-
-        filter.titleOnly?.takeIf { it.isNotBlank() }?.let {
-            filterChipItem("Title: $it") { onRemoveFilter(filter.copy(titleOnly = null)) }
-        }
-
-        filter.abstractOnly?.takeIf { it.isNotBlank() }?.let {
-            filterChipItem("Abs: $it") { onRemoveFilter(filter.copy(abstractOnly = null)) }
-        }
-
-        filter.affiliation?.takeIf { it.isNotBlank() }?.let {
-            filterChipItem("Aff: $it") { onRemoveFilter(filter.copy(affiliation = null)) }
-        }
-
-        filter.objectName?.takeIf { it.isNotBlank() }?.let {
-            filterChipItem("Obj: $it") { onRemoveFilter(filter.copy(objectName = null)) }
-        }
-
-        filter.arxivId?.takeIf { it.isNotBlank() }?.let {
-            filterChipItem("arXiv: $it") { onRemoveFilter(filter.copy(arxivId = null)) }
-        }
-
-        filter.doi?.takeIf { it.isNotBlank() }?.let {
-            filterChipItem("DOI: $it") { onRemoveFilter(filter.copy(doi = null)) }
-        }
-
-        filter.citationCountMin?.let {
-            filterChipItem("Citations > $it") { onRemoveFilter(filter.copy(citationCountMin = null)) }
         }
         
-        // Pro Chips
-        filter.arxivClass?.takeIf { it.isNotBlank() }?.let {
-            filterChipItem("Class: $it") { onRemoveFilter(filter.copy(arxivClass = null)) }
-        }
-        filter.authorCountRange?.let { range ->
-            filterChipItem("Authors: ${range.first}-${range.last}") { onRemoveFilter(filter.copy(authorCountRange = null)) }
-        }
-        filter.bibGroup?.takeIf { it.isNotBlank() }?.let {
-            filterChipItem("Group: $it") { onRemoveFilter(filter.copy(bibGroup = null)) }
-        }
-        filter.database?.takeIf { it.isNotBlank() }?.let {
-            filterChipItem("DB: $it") { onRemoveFilter(filter.copy(database = null)) }
-        }
-        filter.docType?.takeIf { it.isNotBlank() }?.let {
-            filterChipItem("Type: $it") { onRemoveFilter(filter.copy(docType = null)) }
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        Text(
+            "Ready to explore the Cosmos?",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center
+        )
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        Text(
+            "Search through 10M+ curated astrophysics papers using full academic parameters.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            textAlign = TextAlign.Center
+        )
+        
+        if (suggestedKeywords.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(48.dp))
+            
+            Text(
+                "TRENDING TOPICS",
+                style = MaterialTheme.typography.labelLarge.copy(
+                    letterSpacing = 1.sp,
+                    fontWeight = FontWeight.Black
+                ),
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Start
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                suggestedKeywords.forEach { keyword ->
+                    SuggestionChip(
+                        onClick = { onKeywordClick(keyword) },
+                        label = { Text(keyword) },
+                        shape = MaterialTheme.shapes.medium
+                    )
+                }
+            }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-private fun LazyListScope.filterChipItem(label: String, onRemove: () -> Unit) {
-    item {
-        FilterChip(
-            selected = true,
-            onClick = onRemove,
-            label = { Text(label) },
-            trailingIcon = { Icon(Icons.Default.Close, null, Modifier.size(16.dp)) }
+@Composable
+fun EmptyResultsState() {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            Icons.Outlined.SearchOff,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
         )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            "No papers found",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            "Try adjusting your filters or query",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+        )
+    }
+}
+
+@Composable
+fun ErrorState(message: String) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text(text = message, color = MaterialTheme.colorScheme.error)
     }
 }
 
@@ -282,9 +379,12 @@ private fun LazyListScope.filterChipItem(label: String, onRemove: () -> Unit) {
 @Composable
 fun FilterBottomSheet(
     filter: SearchFilter,
-    onFilterChange: (SearchFilter) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onApply: (SearchFilter) -> Unit,
+    onClear: () -> Unit
 ) {
+    var currentFilter by remember { mutableStateOf(filter) }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -292,131 +392,240 @@ fun FilterBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(horizontal = 24.dp)
                 .verticalScroll(rememberScrollState())
                 .navigationBarsPadding()
         ) {
-            Text(
-                text = "Advanced Search Filters",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            )
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            // Standard Filters
-            FilterSectionTitle("Identifiers")
-            FilterTextField("arXiv ID", filter.arxivId ?: "", onValueChange = { onFilterChange(filter.copy(arxivId = it)) })
-            FilterTextField("DOI", filter.doi ?: "", onValueChange = { onFilterChange(filter.copy(doi = it)) })
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            FilterSectionTitle("Refine Text Search")
-            FilterTextField("Title Only", filter.titleOnly ?: "", onValueChange = { onFilterChange(filter.copy(titleOnly = it)) })
-            FilterTextField("Abstract Only", filter.abstractOnly ?: "", onValueChange = { onFilterChange(filter.copy(abstractOnly = it)) })
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            FilterSectionTitle("Authors")
-            FilterTextField("Author (Last, F)", filter.author ?: "", onValueChange = { onFilterChange(filter.copy(author = it)) })
-            FilterTextField("First Author Only", filter.firstAuthor ?: "", onValueChange = { onFilterChange(filter.copy(firstAuthor = it)) })
-            FilterTextField("ORCiD", filter.orcid ?: "", onValueChange = { onFilterChange(filter.copy(orcid = it)) })
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            FilterSectionTitle("Date & Publication")
-            YearRangeInput(filter, onFilterChange)
-            FilterTextField("Journal (bibstem, e.g. ApJ)", filter.bibstem ?: "", onValueChange = { onFilterChange(filter.copy(bibstem = it)) })
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Pro Section Accordion
-            var proExpanded by remember { mutableStateOf(false) }
-            
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-                shape = MaterialTheme.shapes.large
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { proExpanded = !proExpanded }
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.Tune, null, tint = MaterialTheme.colorScheme.primary)
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                "PRO SEARCH FILTERS",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                        }
-                        Icon(
-                            imageVector = if (proExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    
-                    AnimatedVisibility(visible = proExpanded) {
-                        Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
-                            HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
-                            
-                            FilterTextField("arXiv Class (e.g. astro-ph.CO)", filter.arxivClass ?: "", onValueChange = {
-                                onFilterChange(filter.copy(arxivClass = it))
-                            })
-                            
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("Author Count Range", style = MaterialTheme.typography.labelMedium)
-                            AuthorCountRangeInput(filter, onFilterChange)
-                            
-                            FilterTextField("Bib Group (e.g. HST, JWST)", filter.bibGroup ?: "", onValueChange = {
-                                onFilterChange(filter.copy(bibGroup = it))
-                            })
-                            
-                            FilterTextField("Database (astronomy, physics)", filter.database ?: "", onValueChange = {
-                                onFilterChange(filter.copy(database = it))
-                            })
-                            
-                            FilterTextField("Doc Type (article, catalog)", filter.docType ?: "", onValueChange = {
-                                onFilterChange(filter.copy(docType = it))
-                            })
-                        }
-                    }
+                Text(
+                    "Advanced Research", 
+                    style = MaterialTheme.typography.headlineSmall, 
+                    fontWeight = FontWeight.ExtraBold
+                )
+                TextButton(onClick = { 
+                    onClear()
+                    onDismiss()
+                }) {
+                    Text("Clear All", color = MaterialTheme.colorScheme.error)
                 }
             }
 
+            // 1. Academic Standards
+            FilterSectionTitle("Academic Standards")
+            FilterSwitchRow(
+                title = "Refereed Only",
+                subtitle = "Include only peer-reviewed journals",
+                checked = currentFilter.refereedOnly,
+                onCheckedChange = { currentFilter = currentFilter.copy(refereedOnly = it) },
+                icon = Icons.Outlined.Verified
+            )
+            FilterSwitchRow(
+                title = "Open Access",
+                subtitle = "Include only free to read publications",
+                checked = currentFilter.isOpenAccess,
+                onCheckedChange = { currentFilter = currentFilter.copy(isOpenAccess = it) },
+                icon = Icons.Outlined.LockOpen
+            )
+            FilterSwitchRow(
+                title = "Has Data",
+                subtitle = "Papers with associated datasets",
+                checked = currentFilter.hasData,
+                onCheckedChange = { currentFilter = currentFilter.copy(hasData = it) },
+                icon = Icons.Outlined.Storage
+            )
+            FilterSwitchRow(
+                title = "Has Software",
+                subtitle = "Publications with associated code",
+                checked = currentFilter.hasSoftware,
+                onCheckedChange = { currentFilter = currentFilter.copy(hasSoftware = it) },
+                icon = Icons.Outlined.Code
+            )
+
             Spacer(modifier = Modifier.height(24.dp))
-            
-            FilterSectionTitle("Properties")
-            PropertyToggle("Refereed Only", "Show only peer-reviewed papers", filter.refereedOnly) {
-                onFilterChange(filter.copy(refereedOnly = it))
+
+            // 2. Temporal & Bibliographic
+            FilterSectionTitle("Temporal & Bibliographic")
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                FilterTextField(
+                    value = currentFilter.yearRange?.first?.toString() ?: "",
+                    onValueChange = { val v = it.toIntOrNull(); currentFilter = currentFilter.copy(yearRange = if(v != null) v..(currentFilter.yearRange?.last ?: 2027) else null) },
+                    label = "From (Year)",
+                    modifier = Modifier.weight(1f)
+                )
+                FilterTextField(
+                    value = currentFilter.yearRange?.last?.toString() ?: "",
+                    onValueChange = { val v = it.toIntOrNull(); currentFilter = currentFilter.copy(yearRange = if(v != null) (currentFilter.yearRange?.first ?: 1900)..v else null) },
+                    label = "To (Year)",
+                    modifier = Modifier.weight(1f)
+                )
             }
-            PropertyToggle("Open Access", "Show only open access papers", filter.isOpenAccess) {
-                onFilterChange(filter.copy(isOpenAccess = it))
+            Spacer(modifier = Modifier.height(12.dp))
+            FilterTextField(
+                value = currentFilter.bibstem ?: "",
+                onValueChange = { currentFilter = currentFilter.copy(bibstem = it) },
+                label = "Journal/Publication (Bibstem)",
+                placeholder = "e.g. ApJ, A&A, Nature"
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                FilterTextField(
+                    value = currentFilter.volume ?: "",
+                    onValueChange = { currentFilter = currentFilter.copy(volume = it) },
+                    label = "Volume",
+                    modifier = Modifier.weight(1f)
+                )
+                FilterTextField(
+                    value = currentFilter.page ?: "",
+                    onValueChange = { currentFilter = currentFilter.copy(page = it) },
+                    label = "Page",
+                    modifier = Modifier.weight(1f)
+                )
             }
-            PropertyToggle("Has Data", "Papers with associated data links", filter.hasData) {
-                onFilterChange(filter.copy(hasData = it))
+            Spacer(modifier = Modifier.height(12.dp))
+            FilterTextField(
+                value = currentFilter.bibcodePrefix ?: "",
+                onValueChange = { currentFilter = currentFilter.copy(bibcodePrefix = it) },
+                label = "Bibcode Prefix",
+                placeholder = "e.g. 2026ApJ"
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // 3. Research Specifics
+            FilterSectionTitle("Research Specifics")
+            FilterTextField(
+                value = currentFilter.fullText ?: "",
+                onValueChange = { currentFilter = currentFilter.copy(fullText = it) },
+                label = "Full Text Search",
+                placeholder = "Search keywords in paper body"
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            FilterTextField(
+                value = currentFilter.author ?: "",
+                onValueChange = { currentFilter = currentFilter.copy(author = it) },
+                label = "Full Author Name",
+                placeholder = "e.g. Hawking, Stephen"
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            FilterTextField(
+                value = currentFilter.firstAuthor ?: "",
+                onValueChange = { currentFilter = currentFilter.copy(firstAuthor = it) },
+                label = "First Author Only",
+                placeholder = "Primary researcher"
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            FilterTextField(
+                value = currentFilter.affiliation ?: "",
+                onValueChange = { currentFilter = currentFilter.copy(affiliation = it) },
+                label = "Institution / Affiliation",
+                placeholder = "e.g. NASA, CERN, MIT"
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            FilterTextField(
+                value = currentFilter.objectName ?: "",
+                onValueChange = { currentFilter = currentFilter.copy(objectName = it) },
+                label = "Astronomical Object (Simbad)",
+                placeholder = "e.g. M31, Sgr A*"
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // 4. Academic Identifiers
+            FilterSectionTitle("Academic Identifiers")
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                FilterTextField(
+                    value = currentFilter.arxivId ?: "",
+                    onValueChange = { currentFilter = currentFilter.copy(arxivId = it) },
+                    label = "arXiv ID",
+                    modifier = Modifier.weight(1f)
+                )
+                FilterTextField(
+                    value = currentFilter.doi ?: "",
+                    onValueChange = { currentFilter = currentFilter.copy(doi = it) },
+                    label = "DOI",
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            FilterTextField(
+                value = currentFilter.orcid ?: "",
+                onValueChange = { currentFilter = currentFilter.copy(orcid = it) },
+                label = "Author ORCID",
+                placeholder = "e.g. 0000-0002-1825-0097"
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // 5. Elite Pro Parameters
+            var proExpanded by remember { mutableStateOf(false) }
+            Surface(
+                onClick = { proExpanded = !proExpanded },
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
+                shape = MaterialTheme.shapes.large
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.AutoGraph, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("Elite Pro Parameters", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    }
+                    Icon(if(proExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
-            
-            Button(
-                onClick = onDismiss,
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraLarge,
-                contentPadding = PaddingValues(16.dp)
-            ) {
-                Text("Search with Professional Filters", fontWeight = FontWeight.Bold)
+            if (proExpanded) {
+                Spacer(modifier = Modifier.height(16.dp))
+                FilterTextField(
+                    value = currentFilter.arxivClass ?: "",
+                    onValueChange = { currentFilter = currentFilter.copy(arxivClass = it) },
+                    label = "arXiv Class",
+                    placeholder = "e.g. astro-ph.CO, gr-qc"
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                FilterTextField(
+                    value = currentFilter.bibGroup ?: "",
+                    onValueChange = { currentFilter = currentFilter.copy(bibGroup = it) },
+                    label = "Bib Group",
+                    placeholder = "e.g. ARI, CfA"
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                FilterTextField(
+                    value = currentFilter.database ?: "",
+                    onValueChange = { currentFilter = currentFilter.copy(database = it) },
+                    label = "Database",
+                    placeholder = "astronomy, physics, general"
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                FilterTextField(
+                    value = currentFilter.docType ?: "",
+                    onValueChange = { currentFilter = currentFilter.copy(docType = it) },
+                    label = "Document Type",
+                    placeholder = "article, book, newsletter"
+                )
             }
-            
-            Spacer(modifier = Modifier.height(16.dp))
+
+            Spacer(modifier = Modifier.height(40.dp))
+
+            Button(
+                onClick = {
+                    onApply(currentFilter)
+                    onDismiss()
+                },
+                modifier = Modifier.fillMaxWidth().height(64.dp),
+                shape = MaterialTheme.shapes.extraLarge,
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+            ) {
+                Text("Execute Advanced Search", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            }
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
@@ -424,177 +633,77 @@ fun FilterBottomSheet(
 @Composable
 fun FilterSectionTitle(title: String) {
     Text(
-        text = title, 
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(bottom = 8.dp)
+        text = title.uppercase(),
+        style = MaterialTheme.typography.labelLarge.copy(
+            letterSpacing = 1.sp,
+            fontWeight = FontWeight.Black
+        ),
+        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+        modifier = Modifier.padding(vertical = 12.dp)
     )
 }
 
 @Composable
 fun FilterTextField(
-    label: String,
     value: String,
     onValueChange: (String) -> Unit,
-    kbType: KeyboardType = KeyboardType.Text
+    label: String,
+    modifier: Modifier = Modifier,
+    placeholder: String = ""
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-        keyboardOptions = KeyboardOptions(keyboardType = kbType),
-        singleLine = true,
-        shape = MaterialTheme.shapes.large
+        placeholder = { Text(placeholder, style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))) },
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = OutlinedTextFieldDefaults.colors(
+            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+            focusedBorderColor = MaterialTheme.colorScheme.primary
+        )
     )
 }
 
 @Composable
-fun YearRangeInput(filter: SearchFilter, onFilterChange: (SearchFilter) -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        var yearStart by remember { mutableStateOf(filter.yearRange?.first?.toString() ?: "") }
-        var yearEnd by remember { mutableStateOf(filter.yearRange?.last?.toString() ?: "") }
-
-        OutlinedTextField(
-            value = yearStart,
-            onValueChange = { 
-                yearStart = it
-                val start = it.toIntOrNull()
-                val end = yearEnd.toIntOrNull() ?: start
-                if (start != null && end != null) onFilterChange(filter.copy(yearRange = start..end))
-            },
-            label = { Text("Start Year") },
-            modifier = Modifier.weight(1f),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
-            shape = MaterialTheme.shapes.large
-        )
-        OutlinedTextField(
-            value = yearEnd,
-            onValueChange = { 
-                yearEnd = it
-                val end = it.toIntOrNull()
-                val start = yearStart.toIntOrNull() ?: end
-                if (start != null && end != null) onFilterChange(filter.copy(yearRange = start..end))
-            },
-            label = { Text("End Year") },
-            modifier = Modifier.weight(1f),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
-            shape = MaterialTheme.shapes.large
-        )
-    }
-}
-
-@Composable
-fun AuthorCountRangeInput(filter: SearchFilter, onFilterChange: (SearchFilter) -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        var countStart by remember { mutableStateOf(filter.authorCountRange?.first?.toString() ?: "") }
-        var countEnd by remember { mutableStateOf(filter.authorCountRange?.last?.toString() ?: "") }
-
-        OutlinedTextField(
-            value = countStart,
-            onValueChange = { 
-                countStart = it
-                val start = it.toIntOrNull()
-                val end = countEnd.toIntOrNull() ?: 1000
-                if (start != null) onFilterChange(filter.copy(authorCountRange = start..end))
-            },
-            label = { Text("Min") },
-            modifier = Modifier.weight(1f),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
-            shape = MaterialTheme.shapes.large
-        )
-        OutlinedTextField(
-            value = countEnd,
-            onValueChange = { 
-                countEnd = it
-                val end = it.toIntOrNull()
-                val start = countStart.toIntOrNull() ?: 1
-                if (end != null) onFilterChange(filter.copy(authorCountRange = start..end))
-            },
-            label = { Text("Max") },
-            modifier = Modifier.weight(1f),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
-            shape = MaterialTheme.shapes.large
-        )
-    }
-}
-
-@Composable
-fun PropertyToggle(title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+fun FilterSwitchRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    icon: ImageVector
+) {
+    Surface(
+        onClick = { onCheckedChange(!checked) },
+        color = Color.Transparent,
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-            Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
-    }
-}
-
-@Composable
-fun EmptyExploreState() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(
-            Icons.Outlined.Explore,
-            contentDescription = null,
-            modifier = Modifier.size(80.dp),
-            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-        )
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        Text(
-            text = stringResource(R.string.ready_to_explore),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        
-        Spacer(modifier = Modifier.height(12.dp))
-        
-        Text(
-            text = stringResource(R.string.explore_desc),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Surface(
-            color = MaterialTheme.colorScheme.secondaryContainer,
-            shape = MaterialTheme.shapes.medium,
-            modifier = Modifier.fillMaxWidth()
+        Row(
+            modifier = Modifier.padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    Icons.Outlined.Info,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                    icon, 
+                    contentDescription = null, 
+                    tint = if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(16.dp))
-                Text(
-                    text = stringResource(R.string.advanced_search_tip),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                )
+                Column {
+                    Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                    Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                }
             }
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                    checkedTrackColor = MaterialTheme.colorScheme.primary
+                )
+            )
         }
     }
 }

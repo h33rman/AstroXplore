@@ -1,14 +1,28 @@
 package com.example.astroxplore.features.feed.data
 
+import com.example.astroxplore.core.database.dao.FeedPaperDao
+import com.example.astroxplore.core.database.entity.FeedPaperEntity
 import com.example.astroxplore.core.network.NasaAdsApiService
 import com.example.astroxplore.features.feed.model.PaperModel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class PaperRepository @Inject constructor(
-    private val apiService: NasaAdsApiService
+    private val apiService: NasaAdsApiService,
+    private val feedPaperDao: FeedPaperDao
 ) {
+    fun getCachedFeed(): Flow<List<PaperModel>> = feedPaperDao.getCachedFeed().map { entities ->
+        entities.map { it.toDomainModel() }
+    }
+
+    suspend fun refreshFeed(query: String) {
+        val newPapers = getPapersByQuery(query, page = 0, pageSize = 20)
+        feedPaperDao.refreshFeed(newPapers.map { it.toFeedEntity() })
+    }
+
     suspend fun getPapersByQuery(
         query: String,
         sort: String = "date desc",
@@ -24,47 +38,24 @@ class PaperRepository @Inject constructor(
         return response.response.docs
     }
 
-    suspend fun getDailyPreprints(
-        category: String = "astro-ph",
-        page: Int = 0,
-        pageSize: Int = 20
-    ): List<PaperModel> {
-        val query = if (category.contains(" OR ") || category.contains(" AND ")) {
-            "keyword:($category) AND property:eprint"
-        } else if (category.contains(".")) {
-            "keyword:\"$category\" AND property:eprint"
-        } else {
-            "keyword:$category AND property:eprint"
-        }
+    // Mappers
+    private fun FeedPaperEntity.toDomainModel() = PaperModel(
+        bibcode = bibcode,
+        rawTitles = listOf(title),
+        authors = authors.split(", "),
+        abstractText = abstractText,
+        keywords = listOf(category),
+        rawPubDate = dateDisplay,
+        citationCount = citationCount
+    )
 
-        return getPapersByQuery(
-            query = query,
-            sort = "date desc",
-            page = page,
-            pageSize = pageSize
-        )
-    }
-
-    suspend fun search(
-        query: String,
-        categoryFilter: String? = null,
-        refereedOnly: Boolean = false,
-        page: Int = 0,
-        pageSize: Int = 20
-    ): List<PaperModel> {
-        var finalQuery = query
-        if (!categoryFilter.isNullOrEmpty()) {
-            finalQuery += " keyword:\"$categoryFilter\""
-        }
-        if (refereedOnly) {
-            finalQuery += " property:refereed"
-        }
-
-        return getPapersByQuery(
-            query = finalQuery,
-            sort = "citation_count desc, pubdate desc",
-            page = page,
-            pageSize = pageSize
-        )
-    }
+    private fun PaperModel.toFeedEntity() = FeedPaperEntity(
+        bibcode = bibcode,
+        title = title,
+        authors = authors.joinToString(", "),
+        abstractText = abstractText,
+        category = category,
+        dateDisplay = dateDisplay,
+        citationCount = citationCount
+    )
 }

@@ -111,6 +111,14 @@ object NasaAdsQueryBuilder {
             clauses.add("property:data")
         }
 
+        if (filter.hasSoftware) {
+            clauses.add("property:software")
+        }
+
+        filter.fullText?.takeIf { it.isNotBlank() }?.let {
+            clauses.add("body:\"$it\"")
+        }
+
         filter.bibstem?.takeIf { it.isNotBlank() }?.let {
             clauses.add("bibstem:\"$it\"")
         }
@@ -149,6 +157,18 @@ object NasaAdsQueryBuilder {
 
         filter.doi?.takeIf { it.isNotBlank() }?.let {
             clauses.add("doi:\"$it\"")
+        }
+
+        filter.volume?.takeIf { it.isNotBlank() }?.let {
+            clauses.add("volume:\"$it\"")
+        }
+
+        filter.page?.takeIf { it.isNotBlank() }?.let {
+            clauses.add("page:\"$it\"")
+        }
+
+        filter.bibcodePrefix?.takeIf { it.isNotBlank() }?.let {
+            clauses.add("bibcode:$it*")
         }
 
         filter.citationCountMin?.let {
