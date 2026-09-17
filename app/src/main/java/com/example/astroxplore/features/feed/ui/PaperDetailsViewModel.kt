@@ -2,9 +2,10 @@ package com.example.astroxplore.features.feed.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.astroxplore.core.util.ErrorMapper
 import com.example.astroxplore.features.feed.data.PaperRepository
 import com.example.astroxplore.features.feed.model.PaperModel
+import com.example.astroxplore.features.groups.data.GroupRepository
+import com.example.astroxplore.features.groups.model.GroupModel
 import com.example.astroxplore.features.library.data.LibraryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -14,7 +15,8 @@ import javax.inject.Inject
 @HiltViewModel
 class PaperDetailsViewModel @Inject constructor(
     private val paperRepository: PaperRepository,
-    private val libraryRepository: LibraryRepository
+    private val libraryRepository: LibraryRepository,
+    private val groupRepository: GroupRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<PaperDetailsUiState>(PaperDetailsUiState.Loading)
@@ -22,6 +24,20 @@ class PaperDetailsViewModel @Inject constructor(
 
     private val _isSaved = MutableStateFlow(false)
     val isSaved: StateFlow<Boolean> = _isSaved.asStateFlow()
+
+    // Offline-First: Reactively observe user groups
+    val userGroups: StateFlow<List<GroupModel>> = groupRepository.getLocalGroups()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    init {
+        viewModelScope.launch {
+            groupRepository.syncGroups()
+        }
+    }
 
     fun loadPaper(bibcode: String) {
         viewModelScope.launch {
@@ -39,7 +55,7 @@ class PaperDetailsViewModel @Inject constructor(
                     _uiState.value = PaperDetailsUiState.Error("Paper not found")
                 }
             } catch (e: Exception) {
-                _uiState.value = PaperDetailsUiState.Error("Failed to load paper")
+                _uiState.value = PaperDetailsUiState.Error("Failed to load paper details")
             }
         }
     }
@@ -53,6 +69,12 @@ class PaperDetailsViewModel @Inject constructor(
     fun toggleSave(paper: PaperModel) {
         viewModelScope.launch {
             libraryRepository.toggleSave(paper)
+        }
+    }
+
+    fun addPaperToGroup(groupId: String, bibcode: String) {
+        viewModelScope.launch {
+            groupRepository.addPaperToGroup(groupId, bibcode)
         }
     }
 }

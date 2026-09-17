@@ -49,13 +49,11 @@ class FeedViewModel @Inject constructor(
     init {
         loadSavedPapers()
         
-        // Initial load: refresh if empty
-        viewModelScope.launch {
-            feedPapers.collect {
-                if (it.isEmpty() && !_isRefreshing.value) {
-                    refresh()
-                }
-            }
+        // Initial load logic:
+        // Refresh only ONCE per app session on startup.
+        if (!isInitialSyncDone) {
+            refresh()
+            isInitialSyncDone = true
         }
     }
 
@@ -67,6 +65,9 @@ class FeedViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Triggers a manual online sync with NASA ADS
+     */
     fun refresh() {
         viewModelScope.launch {
             _isRefreshing.value = true
@@ -97,5 +98,9 @@ class FeedViewModel @Inject constructor(
             }
             else -> "keyword:\"$category\" AND property:eprint"
         }
+    }
+
+    companion object {
+        private var isInitialSyncDone = false
     }
 }

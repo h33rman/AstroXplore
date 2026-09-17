@@ -11,12 +11,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.astroxplore.features.feed.model.PaperModel
+import com.example.astroxplore.features.feed.ui.components.AstroAbstractView
+import com.example.astroxplore.features.feed.ui.components.AstroPaperTitleText
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun PaperDetailsBottomSheet(
     paper: PaperModel,
@@ -61,7 +62,6 @@ fun PaperDetailsBottomSheet(
             if (!showAuthorsOnly) {
                 Spacer(modifier = Modifier.height(24.dp))
                 
-                // Details Navigation Button at the top
                 Button(
                     onClick = { 
                         onDismiss()
@@ -81,46 +81,56 @@ fun PaperDetailsBottomSheet(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Text(
-                    text = paper.title,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onSurface
+                AstroPaperTitleText(
+                    title = paper.title,
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    ),
+                    maxLines = Int.MAX_VALUE // Ensure full title is shown
                 )
                 
                 Spacer(modifier = Modifier.height(24.dp))
                 
-                Text(
-                    text = paper.abstractText,
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        lineHeight = 26.sp,
-                        textAlign = TextAlign.Justify
-                    ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                AstroAbstractView(
+                    rawAbstract = paper.abstractText,
+                    isExpanded = true
                 )
             }
 
             Spacer(modifier = Modifier.height(32.dp))
+            
+            HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
             Text(
                 text = "Full Author List",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.sp
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             
-            paper.authors.forEach { author ->
-                Surface(
-                    modifier = Modifier.padding(vertical = 4.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                    shape = MaterialTheme.shapes.medium
-                ) {
-                    Text(
-                        text = author,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium
-                    )
+            // Using a standard Row with wrapping behavior or FlowRow
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                paper.authors.forEach { author ->
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Text(
+                            text = author,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
             
@@ -134,7 +144,7 @@ fun PaperDetailsBottomSheet(
                 )
                 
                 Spacer(modifier = Modifier.height(16.dp))
-                // Redundant Details Navigation at the bottom
+                
                 OutlinedButton(
                     onClick = { 
                         onDismiss()

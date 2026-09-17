@@ -16,6 +16,8 @@ import com.example.astroxplore.features.auth.ui.LoginScreen
 import com.example.astroxplore.features.auth.ui.SignupScreen
 import com.example.astroxplore.features.feed.ui.FeedScreen
 import com.example.astroxplore.features.feed.ui.PaperDetailsScreen
+import com.example.astroxplore.features.groups.ui.GroupDetailsScreen
+import com.example.astroxplore.features.groups.ui.GroupsScreen
 import com.example.astroxplore.features.library.ui.LibraryScreen
 import com.example.astroxplore.features.onboarding.ui.OnboardingScreen
 import com.example.astroxplore.features.profile.ui.InterestsScreen
@@ -52,7 +54,21 @@ fun AppNavGraph(
             )
         }
         composable<Screen.Groups> {
-            PlaceholderScreen("Groups")
+            GroupsScreen(
+                onGroupClick = { groupId ->
+                    navController.navigate(Screen.GroupDetails(groupId))
+                }
+            )
+        }
+        composable<Screen.GroupDetails> { backStackEntry ->
+            val details = backStackEntry.toRoute<Screen.GroupDetails>()
+            GroupDetailsScreen(
+                groupId = details.groupId,
+                onNavigateBack = { navController.popBackStack() },
+                onPaperClick = { bibcode ->
+                    navController.navigate(Screen.PaperDetails(bibcode))
+                }
+            )
         }
         composable<Screen.Explore> { backStackEntry ->
             val explore = backStackEntry.toRoute<Screen.Explore>()

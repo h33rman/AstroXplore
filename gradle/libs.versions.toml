@@ -22,6 +22,7 @@ ktor = "3.0.3"
 hilt = "2.60.1"
 hiltNavigationCompose = "1.4.0"
 secretsGradlePlugin = "2.0.1"
+latex = "1.5.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -74,6 +75,7 @@ coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coi
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
 hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
+latex-renderer = { module = "io.github.huarangmeng:latex-renderer", version.ref = "latex" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.example.astroxplore.core.database.AppDatabase
 import com.example.astroxplore.core.database.dao.FeedPaperDao
+import com.example.astroxplore.core.database.dao.GroupDao
 import com.example.astroxplore.core.database.dao.KeywordDao
 import com.example.astroxplore.core.database.dao.SavedPaperDao
 import dagger.Module
@@ -45,5 +46,11 @@ object DatabaseModule {
     @Singleton
     fun provideFeedPaperDao(database: AppDatabase): FeedPaperDao {
         return database.feedPaperDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideGroupDao(database: AppDatabase): GroupDao {
+        return database.groupDao()
     }
 }

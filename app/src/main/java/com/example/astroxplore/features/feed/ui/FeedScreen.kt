@@ -42,7 +42,6 @@ import java.util.*
 fun FeedScreen(
     modifier: Modifier = Modifier,
     viewModel: FeedViewModel = hiltViewModel(),
-    mainViewModel: MainViewModel = hiltViewModel(LocalContext.current.findActivity()!!),
     onSearchClick: () -> Unit = {},
     onPaperClick: (String) -> Unit = {}
 ) {
@@ -57,17 +56,17 @@ fun FeedScreen(
     var selectedPaperForDetails by remember { mutableStateOf<PaperModel?>(null) }
     var showAuthorsOnly by remember { mutableStateOf(false) }
 
-    // Listen for Scroll to Top Event
+    // Listen for Scroll to Top Event (Always reset when Feed tab is clicked)
     LaunchedEffect(Unit) {
-        mainViewModel.scrollToTopEvent.collectLatest {
-            listState.animateScrollToItem(0)
+        viewModel.scrollToTopEvent.collectLatest {
+            listState.scrollToItem(0)
         }
     }
     
     // Modern Collapsing Header Logic
     val scrollOffset = remember { derivedStateOf { listState.firstVisibleItemScrollOffset } }
     val firstItemIndex = remember { derivedStateOf { listState.firstVisibleItemIndex } }
-    val isScrolled = remember { derivedStateOf { firstItemIndex.value > 0 || scrollOffset.value > 20 } }
+    val isScrolled = remember { derivedStateOf { firstItemIndex.value > 0 || scrollOffset.value > 10 } }
     
     val headerAlpha by animateFloatAsState(
         targetValue = if (isScrolled.value) 0f else 1f,
@@ -80,7 +79,7 @@ fun FeedScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Main Feed with Pull to Refresh
+        // Main Feed
         PullToRefreshBox(
             isRefreshing = isRefreshing,
             onRefresh = { viewModel.refresh() },
@@ -89,7 +88,7 @@ fun FeedScreen(
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(top = 250.dp, bottom = 16.dp)
+                contentPadding = PaddingValues(top = 220.dp, bottom = 16.dp)
             ) {
                 if (papers.isEmpty() && isRefreshing) {
                     items(5) { PaperCardSkeleton() }
@@ -123,12 +122,11 @@ fun FeedScreen(
             }
         }
 
-        // Immersive Header Overlay (Sticky Bar)
+        // Header Overlay
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            color = if (isScrolled.value) MaterialTheme.colorScheme.surface.copy(alpha = 0.95f) else Color.Transparent,
-            tonalElevation = if (isScrolled.value) 6.dp else 0.dp,
-            shadowElevation = if (isScrolled.value) 12.dp else 0.dp
+            color = if (isScrolled.value) MaterialTheme.colorScheme.surface.copy(alpha = 0.98f) else Color.Transparent,
+            tonalElevation = if (isScrolled.value) 4.dp else 0.dp
         ) {
             Column(
                 modifier = Modifier
@@ -136,7 +134,7 @@ fun FeedScreen(
                     .statusBarsPadding()
                     .padding(bottom = 12.dp)
             ) {
-                // Greeting & Discovery Title
+                // Greeting & Title
                 Box(
                     modifier = Modifier
                         .graphicsLayer { 
@@ -150,7 +148,7 @@ fun FeedScreen(
                     }
                 }
 
-                // Sticky Search Bar
+                // Search Bar
                 Box(
                     modifier = Modifier
                         .padding(horizontal = 20.dp, vertical = 6.dp)
@@ -163,7 +161,7 @@ fun FeedScreen(
             }
         }
 
-        // Paper Details Bottom Sheet
+        // Details Sheet
         if (selectedPaperForDetails != null) {
             PaperDetailsBottomSheet(
                 paper = selectedPaperForDetails!!,
@@ -207,21 +205,19 @@ fun DiscoveryHeader() {
                 )
             }
             
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                shape = CircleShape
+            IconButton(
+                onClick = {},
+                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), CircleShape)
             ) {
-                IconButton(onClick = {}) {
-                    Icon(
-                        Icons.Outlined.Notifications,
-                        contentDescription = "Notifications",
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
+                Icon(
+                    Icons.Outlined.Notifications,
+                    contentDescription = "Notifications",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
             }
         }
         
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         
         Text(
             text = stringResource(R.string.discovery),
@@ -231,7 +227,7 @@ fun DiscoveryHeader() {
                 lineHeight = 44.sp
             ),
             color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(bottom = 8.dp)
+            modifier = Modifier.padding(bottom = 4.dp)
         )
     }
 }
@@ -239,15 +235,15 @@ fun DiscoveryHeader() {
 @Composable
 fun SearchBar(onSearchClick: () -> Unit, isSticky: Boolean = false) {
     val barHeight by animateDpAsState(
-        targetValue = if (isSticky) 46.dp else 56.dp,
+        targetValue = if (isSticky) 48.dp else 56.dp,
         animationSpec = spring(stiffness = Spring.StiffnessLow),
         label = "barHeight"
     )
     
     val containerColor = if (isSticky) {
-        MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
     } else {
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
     }
 
     Surface(
@@ -257,12 +253,7 @@ fun SearchBar(onSearchClick: () -> Unit, isSticky: Boolean = false) {
         modifier = Modifier
             .fillMaxWidth()
             .height(barHeight),
-        border = if (isSticky) {
-            BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
-        } else {
-            BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-        },
-        tonalElevation = if (isSticky) 2.dp else 0.dp
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
     ) {
         Row(
             modifier = Modifier
@@ -273,14 +264,13 @@ fun SearchBar(onSearchClick: () -> Unit, isSticky: Boolean = false) {
                 Icons.Default.Search,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(if (isSticky) 18.dp else 22.dp)
+                modifier = Modifier.size(if (isSticky) 20.dp else 24.dp)
             )
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = "Search 10M+ astrophysics papers...",
                 style = if (isSticky) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                fontWeight = if (isSticky) FontWeight.Medium else FontWeight.Normal
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
         }
     }

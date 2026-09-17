@@ -151,6 +151,12 @@ fun AstroXploreMain(
         }
     }
 
+    LaunchedEffect(currentDestination) {
+        if (currentDestination?.hasRoute<Screen.Feed>() == true) {
+            mainViewModel.triggerScrollToTop()
+        }
+    }
+
     val showNavigation = currentDestination != null && (
             currentDestination.hasRoute<Screen.Feed>() ||
             currentDestination.hasRoute<Screen.Groups>() ||
@@ -213,8 +219,13 @@ fun AstroXploreMain(
                         },
                         selected = isSelected,
                         onClick = {
-                            if (isSelected && destination == AppDestinations.FEED) {
+                            if (destination == AppDestinations.FEED) {
+                                // Always reset to top when clicking Feed tab
                                 mainViewModel.triggerScrollToTop()
+                            }
+                            
+                            if (isSelected) {
+                                // Already here, do nothing else
                             } else {
                                 navController.navigate(destination.screen) {
                                     popUpTo(navController.graph.startDestinationId) {

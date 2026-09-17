@@ -16,12 +16,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -84,32 +81,21 @@ fun PaperCard(
             Spacer(modifier = Modifier.height(14.dp))
 
             // Title - Clickable
-            Text(
-                text = paper.title,
+            AstroPaperTitleText(
+                title = paper.title,
                 style = MaterialTheme.typography.headlineSmall.copy(
                     fontWeight = FontWeight.ExtraBold,
                     lineHeight = 30.sp,
                     letterSpacing = (-0.5).sp
                 ),
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.clickable { onTitleClick() }
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
             // Abstract with Justify
-            Text(
-                text = paper.abstractText,
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    lineHeight = 24.sp,
-                    letterSpacing = 0.2.sp,
-                    textAlign = TextAlign.Justify
-                ),
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f),
-                maxLines = 4,
-                overflow = TextOverflow.Ellipsis,
+            AstroAbstractView(
+                rawAbstract = paper.abstractText,
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onReadMoreClick() }
@@ -248,15 +234,15 @@ fun PaperCardSkeleton() {
         shape = MaterialTheme.shapes.extraLarge
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
-            Box(modifier = Modifier.size(80.dp, 16.dp).clip(MaterialTheme.shapes.small).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = alpha)))
+            Box(modifier = Modifier.size(80.dp, 16.dp).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = alpha), MaterialTheme.shapes.small))
             Spacer(modifier = Modifier.height(16.dp))
-            Box(modifier = Modifier.fillMaxWidth().height(28.dp).clip(MaterialTheme.shapes.small).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = alpha)))
+            Box(modifier = Modifier.fillMaxWidth().height(28.dp).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = alpha), MaterialTheme.shapes.small))
             Spacer(modifier = Modifier.height(8.dp))
-            Box(modifier = Modifier.fillMaxWidth(0.6f).height(28.dp).clip(MaterialTheme.shapes.small).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = alpha)))
+            Box(modifier = Modifier.fillMaxWidth(0.6f).height(28.dp).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = alpha), MaterialTheme.shapes.small))
             Spacer(modifier = Modifier.height(16.dp))
-            Box(modifier = Modifier.fillMaxWidth().height(60.dp).clip(MaterialTheme.shapes.small).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = alpha)))
+            Box(modifier = Modifier.fillMaxWidth().height(60.dp).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = alpha), MaterialTheme.shapes.small))
             Spacer(modifier = Modifier.height(20.dp))
-            Box(modifier = Modifier.size(120.dp, 32.dp).clip(MaterialTheme.shapes.small).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = alpha)))
+            Box(modifier = Modifier.size(120.dp, 32.dp).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = alpha), MaterialTheme.shapes.small))
         }
     }
 }

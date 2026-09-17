@@ -38,4 +38,7 @@ sealed interface Screen {
 
     @Serializable
     data class PaperDetails(val bibcode: String) : Screen
+
+    @Serializable
+    data class GroupDetails(val groupId: String) : Screen
 }

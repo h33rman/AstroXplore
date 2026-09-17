@@ -20,9 +20,6 @@ data class PaperModel(
     val title: String
         get() = rawTitles.firstOrNull() ?: "Untitled Paper"
 
-    val sanitizedTitle: String
-        get() = title.replace(Regex("<[^>]*>"), "")
-
     val arxivId: String?
         get() = identifiers.firstOrNull { it.startsWith("arXiv:") }?.removePrefix("arXiv:")
 
