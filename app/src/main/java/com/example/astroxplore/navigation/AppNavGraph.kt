@@ -37,9 +37,7 @@ fun AppNavGraph(
         composable<Screen.Splash> {
             SplashScreen(
                 onSplashComplete = {
-                    navController.navigate(Screen.Login) {
-                        popUpTo(Screen.Splash) { inclusive = true }
-                    }
+                    // Letting MainActivity handle the transition once session state is determined
                 }
             )
         }

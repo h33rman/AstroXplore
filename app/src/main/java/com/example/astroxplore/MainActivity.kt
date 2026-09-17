@@ -120,27 +120,34 @@ fun AstroXploreMain(
     val currentDestination = navBackStackEntry?.destination
 
     LaunchedEffect(sessionStatus, isOnboarded) {
-        if (sessionStatus is SessionStatus.Authenticated) {
-            if (isOnboarded == false) {
-                navController.navigate(Screen.Onboarding) {
-                    popUpTo(0) { inclusive = true }
-                }
-            } else if (isOnboarded == true) {
-                navController.navigate(Screen.Feed) {
-                    popUpTo(0) { inclusive = true }
+        val currentRoute = currentDestination?.route
+        val isOnSplash = currentRoute?.contains("Splash") == true
+        val isOnAuth = currentRoute?.contains("Login") == true || currentRoute?.contains("Signup") == true
+
+        when (sessionStatus) {
+            is SessionStatus.Authenticated -> {
+                if (isOnboarded == true) {
+                    if (isOnSplash || isOnAuth) {
+                        navController.navigate(Screen.Feed) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                } else if (isOnboarded == false) {
+                    if (isOnSplash || isOnAuth) {
+                        navController.navigate(Screen.Onboarding) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
                 }
             }
-        } else if (sessionStatus is SessionStatus.NotAuthenticated) {
-            val currentRoute = currentDestination?.route
-            val isAuthScreen = currentRoute?.contains("Login") == true ||
-                    currentRoute?.contains("Signup") == true ||
-                    currentRoute?.contains("Splash") == true
-            
-            if (!isAuthScreen) {
-                navController.navigate(Screen.Login) {
-                    popUpTo(0) { inclusive = true }
+            is SessionStatus.NotAuthenticated -> {
+                if (!isOnAuth) {
+                    navController.navigate(Screen.Login) {
+                        popUpTo(0) { inclusive = true }
+                    }
                 }
             }
+            else -> {} 
         }
     }
 
