@@ -22,12 +22,21 @@ class SignupViewModel @Inject constructor(
         email: String,
         password: String,
         firstName: String,
-        lastName: String
+        lastName: String,
+        institution: String?,
+        orcidId: String?
     ) {
         viewModelScope.launch {
             _uiState.value = SignupUiState.Loading
             try {
-                val needsConfirmation = authRepository.register(email, password, firstName, lastName)
+                val needsConfirmation = authRepository.register(
+                    email, 
+                    password, 
+                    firstName, 
+                    lastName,
+                    institution,
+                    orcidId
+                )
                 _uiState.value = SignupUiState.Success(needsConfirmation)
             } catch (e: Exception) {
                 _uiState.value = SignupUiState.Error(ErrorMapper.mapToMessage(e))

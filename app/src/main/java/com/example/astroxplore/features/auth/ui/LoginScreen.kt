@@ -47,6 +47,7 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsState()
+    val isOnline by viewModel.isOnline.collectAsState()
     val darkTheme = isSystemInDarkTheme()
 
     var showForm by remember { mutableStateOf(false) }
@@ -189,19 +190,23 @@ fun LoginScreen(
                             Button(
                                 onClick = { viewModel.login(email, password) },
                                 modifier = Modifier.fillMaxWidth().height(64.dp),
-                                enabled = uiState !is LoginUiState.Loading && email.isNotEmpty() && password.isNotEmpty(),
+                                enabled = isOnline && uiState !is LoginUiState.Loading && email.isNotEmpty() && password.isNotEmpty(),
                                 shape = MaterialTheme.shapes.extraLarge,
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.primary,
                                     contentColor = MaterialTheme.colorScheme.onPrimary,
-                                    disabledContainerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
+                                    disabledContainerColor = if (!isOnline) MaterialTheme.colorScheme.error.copy(alpha = 0.1f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
                                 )
                             ) {
                                 AnimatedContent(targetState = uiState is LoginUiState.Loading, label = "loading") { isLoading ->
                                     if (isLoading) {
                                         CircularProgressIndicator(modifier = Modifier.size(28.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 3.dp)
                                     } else {
-                                        Text(text = stringResource(R.string.login), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                                        Text(
+                                            text = if (isOnline) stringResource(R.string.login) else "No Connection",
+                                            style = MaterialTheme.typography.titleLarge, 
+                                            fontWeight = FontWeight.Bold
+                                        )
                                     }
                                 }
                             }

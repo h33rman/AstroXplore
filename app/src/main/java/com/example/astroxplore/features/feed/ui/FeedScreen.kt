@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
@@ -21,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,7 +35,10 @@ import com.example.astroxplore.features.feed.model.PaperModel
 import com.example.astroxplore.features.feed.ui.components.PaperCard
 import com.example.astroxplore.features.feed.ui.components.PaperCardSkeleton
 import com.example.astroxplore.features.feed.ui.components.PaperDetailsBottomSheet
+import com.example.astroxplore.features.groups.ui.components.GroupPickerSheet
+import com.example.astroxplore.navigation.Screen
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -43,30 +48,50 @@ fun FeedScreen(
     modifier: Modifier = Modifier,
     viewModel: FeedViewModel = hiltViewModel(),
     onSearchClick: () -> Unit = {},
-    onPaperClick: (String) -> Unit = {}
+    onPaperClick: (String) -> Unit = {},
+    onLibraryClick: () -> Unit = {}
 ) {
     val papers by viewModel.feedPapers.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val error by viewModel.error.collectAsState()
     val savedPaperIds by viewModel.savedPaperIds.collectAsState()
+    val isOnline by viewModel.isOnline.collectAsState()
+    val userGroups by viewModel.userGroups.collectAsState()
     
     val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
     
     // Bottom Sheet State
     var selectedPaperForDetails by remember { mutableStateOf<PaperModel?>(null) }
+    var selectedPaperForGroup by remember { mutableStateOf<PaperModel?>(null) }
     var showAuthorsOnly by remember { mutableStateOf(false) }
+    var showGroupPicker by remember { mutableStateOf(false) }
 
     // Listen for Scroll to Top Event (Always reset when Feed tab is clicked)
     LaunchedEffect(Unit) {
+        // Force scroll to top on initial entry to ensure header visibility
+        listState.scrollToItem(0)
+        
         viewModel.scrollToTopEvent.collectLatest {
-            listState.scrollToItem(0)
+            listState.animateScrollToItem(0)
         }
     }
     
     // Modern Collapsing Header Logic
     val scrollOffset = remember { derivedStateOf { listState.firstVisibleItemScrollOffset } }
     val firstItemIndex = remember { derivedStateOf { listState.firstVisibleItemIndex } }
-    val isScrolled = remember { derivedStateOf { firstItemIndex.value > 0 || scrollOffset.value > 10 } }
+    
+    // Force header visibility when refreshing, offline, or at the very top
+    val isScrolled = remember { 
+        derivedStateOf { 
+            if (isRefreshing || (!isOnline && papers.isEmpty())) {
+                false 
+            } else {
+                firstItemIndex.value > 0 || scrollOffset.value > 20
+            }
+        } 
+    }
     
     val headerAlpha by animateFloatAsState(
         targetValue = if (isScrolled.value) 0f else 1f,
@@ -79,44 +104,55 @@ fun FeedScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Main Feed
-        PullToRefreshBox(
-            isRefreshing = isRefreshing,
-            onRefresh = { viewModel.refresh() },
-            modifier = Modifier.fillMaxSize()
-        ) {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(top = 220.dp, bottom = 16.dp)
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            containerColor = Color.Transparent
+        ) { padding ->
+            // Main Feed
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = { viewModel.refresh() },
+                modifier = Modifier.fillMaxSize().padding(padding)
             ) {
-                if (papers.isEmpty() && isRefreshing) {
-                    items(5) { PaperCardSkeleton() }
-                } else if (papers.isEmpty() && error != null) {
-                    item {
-                        Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(text = stringResource(error!!), color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(top = 220.dp, bottom = 16.dp)
+                ) {
+                    if (!isOnline && papers.isEmpty()) {
+                        item {
+                            OfflineFeedState(onLibraryClick = onLibraryClick)
                         }
-                    }
-                } else {
-                    items(papers, key = { it.bibcode }) { paper ->
-                        PaperCard(
-                            paper = paper,
-                            isSaved = savedPaperIds.contains(paper.bibcode),
-                            onSaveClick = { viewModel.toggleSavePaper(paper) },
-                            onTitleClick = { onPaperClick(paper.bibcode) },
-                            onReadMoreClick = {
-                                selectedPaperForDetails = paper
-                                showAuthorsOnly = false
-                            },
-                            onAuthorsClick = {
-                                selectedPaperForDetails = paper
-                                showAuthorsOnly = true
+                    } else if (papers.isEmpty() && isRefreshing) {
+                        items(5) { PaperCardSkeleton() }
+                    } else if (papers.isEmpty() && error != null) {
+                        item {
+                            Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                                Text(text = stringResource(error!!), color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
                             }
-                        )
-                    }
-                    if (papers.isNotEmpty()) {
-                        item { EndOfFeedMessage() }
+                        }
+                    } else {
+                        items(papers, key = { it.bibcode }) { paper ->
+                            PaperCard(
+                                paper = paper,
+                                isSaved = savedPaperIds.contains(paper.bibcode),
+                                onSaveClick = { viewModel.toggleSavePaper(paper) },
+                                onTitleClick = { onPaperClick(paper.bibcode) },
+                                onReadMoreClick = { onPaperClick(paper.bibcode) },
+                                onAuthorsClick = {
+                                    selectedPaperForDetails = paper
+                                    showAuthorsOnly = true
+                                },
+                                onMoreClick = {
+                                    selectedPaperForGroup = paper
+                                    showGroupPicker = true
+                                }
+                            )
+                        }
+                        if (papers.isNotEmpty()) {
+                            item { EndOfFeedMessage() }
+                        }
                     }
                 }
             }
@@ -168,6 +204,20 @@ fun FeedScreen(
                 showAuthorsOnly = showAuthorsOnly,
                 onDismiss = { selectedPaperForDetails = null },
                 onNavigateToDetails = onPaperClick
+            )
+        }
+
+        if (showGroupPicker && selectedPaperForGroup != null) {
+            GroupPickerSheet(
+                groups = userGroups,
+                onDismiss = { showGroupPicker = false },
+                onGroupSelected = { groupId ->
+                    viewModel.addPaperToGroup(groupId, selectedPaperForGroup!!.bibcode)
+                    showGroupPicker = false
+                    scope.launch {
+                        snackbarHostState.showSnackbar("Added to Journal Club")
+                    }
+                }
             )
         }
     }
@@ -289,6 +339,44 @@ fun EndOfFeedMessage() {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
         )
+    }
+}
+
+@Composable
+fun OfflineFeedState(onLibraryClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.CloudOff,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "You're offline",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = "Discovery requires an internet connection. Visit your Library to read saved papers.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(vertical = 8.dp)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(
+            onClick = onLibraryClick,
+            shape = MaterialTheme.shapes.medium
+        ) {
+            Text("Go to Library")
+        }
     }
 }
 

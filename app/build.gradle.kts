@@ -101,6 +101,7 @@ dependencies {
     implementation(libs.hilt.navigation.compose)
 
     implementation(libs.latex.renderer)
+    implementation(libs.zxing.core)
 
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

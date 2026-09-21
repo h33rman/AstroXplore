@@ -39,15 +39,17 @@ class LibraryRepository @Inject constructor(
     }
 
     private suspend fun savePaper(userId: String, paper: PaperModel) {
-        // Save locally
-        savedPaperDao.savePaper(paper.toEntity())
+        // Save locally first
+        savedPaperDao.savePaper(paper.toEntity(isSynced = false))
         
         // Save to Supabase
         try {
             val model = paper.toSupabaseModel(userId)
             supabaseClient.postgrest["saved_papers"].insert(model)
+            savedPaperDao.savePaper(paper.toEntity(isSynced = true))
         } catch (e: Exception) {
-            // Log error
+            e.printStackTrace() // Log for debugging
+            // Remains unsynced
         }
     }
 
@@ -64,13 +66,14 @@ class LibraryRepository @Inject constructor(
                 }
             }
         } catch (e: Exception) {
-            // Log error
+            e.printStackTrace()
         }
     }
 
     suspend fun syncLibrary() = withContext(Dispatchers.IO) {
         val userId = supabaseClient.auth.currentUserOrNull()?.id ?: return@withContext
         try {
+            // 1. Fetch remote papers
             val remotePapers = supabaseClient.postgrest["saved_papers"]
                 .select(columns = Columns.ALL) {
                     filter {
@@ -79,14 +82,38 @@ class LibraryRepository @Inject constructor(
                 }
                 .decodeList<SavedPaperModel>()
             
-            // Sync remote to local
+            // 2. Sync remote to local
             remotePapers.forEach { remote ->
-                savedPaperDao.savePaper(remote.toEntity())
+                savedPaperDao.savePaper(remote.toEntity(isSynced = true))
+            }
+
+            // 3. Sync local unsynced to remote
+            val unsynced = savedPaperDao.getUnsyncedPapers()
+            unsynced.forEach { paper ->
+                try {
+                    val model = paper.toSupabaseModel(userId)
+                    supabaseClient.postgrest["saved_papers"].insert(model)
+                    savedPaperDao.savePaper(paper.copy(isSynced = true))
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    // Fail silently, retry next sync
+                }
             }
         } catch (e: Exception) {
-            // Log error
+            e.printStackTrace()
         }
     }
+
+    private fun SavedPaperEntity.toSupabaseModel(userId: String) = SavedPaperModel(
+        userId = userId,
+        bibcode = bibcode,
+        title = title,
+        authors = authors,
+        abstract = abstractText,
+        category = category,
+        dateDisplay = dateDisplay,
+        citationCount = citationCount
+    )
 
     // Mappers
     private fun SavedPaperEntity.toDomainModel() = PaperModel(
@@ -99,24 +126,26 @@ class LibraryRepository @Inject constructor(
         citationCount = citationCount
     )
 
-    private fun PaperModel.toEntity() = SavedPaperEntity(
+    private fun PaperModel.toEntity(isSynced: Boolean = true) = SavedPaperEntity(
         bibcode = bibcode,
         title = title,
         authors = authors.joinToString(", "),
         abstractText = abstractText,
         category = category,
         dateDisplay = dateDisplay,
-        citationCount = citationCount
+        citationCount = citationCount,
+        isSynced = isSynced
     )
 
-    private fun SavedPaperModel.toEntity() = SavedPaperEntity(
+    private fun SavedPaperModel.toEntity(isSynced: Boolean = true) = SavedPaperEntity(
         bibcode = bibcode,
         title = title ?: "",
         authors = authors ?: "",
         abstractText = abstract ?: "",
         category = category ?: "",
         dateDisplay = dateDisplay ?: "",
-        citationCount = citationCount
+        citationCount = citationCount,
+        isSynced = isSynced
     )
 
     private fun PaperModel.toSupabaseModel(userId: String) = SavedPaperModel(

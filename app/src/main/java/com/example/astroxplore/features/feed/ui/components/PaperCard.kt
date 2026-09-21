@@ -22,6 +22,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.example.astroxplore.R
 import com.example.astroxplore.features.feed.model.PaperModel
 
 @Composable
@@ -93,12 +95,12 @@ fun PaperCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Abstract with Justify
+            // Abstract - Clickable
             AstroAbstractView(
                 rawAbstract = paper.abstractText,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onReadMoreClick() }
+                    .clickable { onTitleClick() } // Navigate directly to details
             )
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -182,7 +184,7 @@ fun PaperCard(
                         icon = if (isSaved) Icons.Default.Bookmark else Icons.Outlined.BookmarkBorder,
                         activeColor = MaterialTheme.colorScheme.primary,
                         isActive = isSaved,
-                        label = "Save",
+                        label = if (isSaved) stringResource(R.string.saved) else stringResource(R.string.save),
                         onClick = onSaveClick
                     )
 
@@ -200,13 +202,29 @@ fun PaperCard(
                 }
 
                 // More Action
-                IconButton(onClick = onMoreClick, modifier = Modifier.size(32.dp)) {
-                    Icon(
-                        Icons.Default.MoreHoriz,
-                        contentDescription = "More",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        modifier = Modifier.size(24.dp)
-                    )
+                Box {
+                    var expanded by remember { mutableStateOf(false) }
+                    IconButton(onClick = { expanded = true }, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            Icons.Default.MoreHoriz,
+                            contentDescription = "More",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.add_to_group)) },
+                            leadingIcon = { Icon(Icons.Default.Groups, contentDescription = null) },
+                            onClick = {
+                                expanded = false
+                                onMoreClick()
+                            }
+                        )
+                    }
                 }
             }
         }

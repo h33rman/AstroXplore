@@ -1,8 +1,11 @@
 package com.example.astroxplore.features.profile.data
 
 import com.example.astroxplore.core.database.dao.KeywordDao
+import com.example.astroxplore.core.database.dao.ProfileDao
 import com.example.astroxplore.core.database.entity.KeywordEntity
+import com.example.astroxplore.core.database.entity.ProfileEntity
 import com.example.astroxplore.core.database.entity.UserPreferenceEntity
+import com.example.astroxplore.core.database.entity.toEntity
 import com.example.astroxplore.features.profile.model.KeywordModel
 import com.example.astroxplore.features.profile.model.ProfileModel
 import com.example.astroxplore.features.profile.model.UserPreference
@@ -13,6 +16,7 @@ import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -21,24 +25,58 @@ import javax.inject.Singleton
 @Singleton
 class ProfileRepository @Inject constructor(
     private val supabaseClient: SupabaseClient,
+    private val profileDao: ProfileDao,
     private val keywordDao: KeywordDao
 ) {
+    fun getLocalProfile(userId: String): Flow<ProfileModel?> = profileDao.getProfile(userId).map { 
+        it?.toDomainModel()
+    }
+
     suspend fun getProfile(userId: String): ProfileModel? = withContext(Dispatchers.IO) {
         try {
-            supabaseClient.postgrest["profiles"]
+            val remoteProfile = supabaseClient.postgrest["profiles"]
                 .select(columns = Columns.ALL) {
                     filter {
                         eq("id", userId)
                     }
                 }
                 .decodeSingleOrNull<ProfileModel>()
+            
+            if (remoteProfile != null) {
+                profileDao.insertProfile(remoteProfile.toEntity(isSynced = true))
+            }
+            remoteProfile
         } catch (e: Exception) {
-            null
+            e.printStackTrace()
+            // Fallback to local
+            profileDao.getProfileSync(userId)?.toDomainModel()
         }
     }
 
     suspend fun updateProfile(profile: ProfileModel) = withContext(Dispatchers.IO) {
-        supabaseClient.postgrest["profiles"].upsert(profile)
+        // Save locally first
+        profileDao.insertProfile(profile.toEntity(isSynced = false))
+        
+        try {
+            supabaseClient.postgrest["profiles"].upsert(profile)
+            profileDao.insertProfile(profile.toEntity(isSynced = true))
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // Remains unsynced
+        }
+    }
+
+    suspend fun syncProfile(userId: String) = withContext(Dispatchers.IO) {
+        try {
+            val unsynced = profileDao.getProfileSync(userId)
+            if (unsynced != null && !unsynced.isSynced) {
+                updateProfile(unsynced.toDomainModel())
+            } else {
+                getProfile(userId)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     fun getLocalKeywords(): Flow<List<String>> = keywordDao.getAllKeywords().map { entities ->
@@ -57,6 +95,7 @@ class ProfileRepository @Inject constructor(
                 .decodeList<KeywordModel>()
                 .map { it.name }
         } catch (e: Exception) {
+            e.printStackTrace()
             emptyList()
         }
     }
@@ -74,6 +113,7 @@ class ProfileRepository @Inject constructor(
                 .take(limit)
                 .map { it.name }
         } catch (e: Exception) {
+            e.printStackTrace()
             emptyList()
         }
     }
@@ -89,7 +129,7 @@ class ProfileRepository @Inject constructor(
                 keywordDao.insertKeywords(remoteKeywords.map { KeywordEntity(it.name, it.category) })
             }
         } catch (e: Exception) {
-            // Log error or handle
+            e.printStackTrace()
         }
     }
 
@@ -109,6 +149,7 @@ class ProfileRepository @Inject constructor(
             }
             remotePrefs
         } catch (e: Exception) {
+            e.printStackTrace()
             // Fallback to local if remote fails
             keywordDao.getUserPreferences().first().map { it.keyword }
         }
@@ -119,43 +160,47 @@ class ProfileRepository @Inject constructor(
     }
 
     suspend fun syncUserPreferences(userId: String, keywordTags: List<String>) = withContext(Dispatchers.IO) {
-        // Ensure profile exists first
-        val profile = getProfile(userId)
-        if (profile == null) {
-            val userEmail = supabaseClient.auth.currentUserOrNull()?.email ?: ""
-            supabaseClient.postgrest["profiles"].upsert(mapOf(
-                "id" to userId,
-                "email" to userEmail,
-                "is_onboarded" to true
-            ))
-        } else {
-            // Mark as onboarded in profile
-            supabaseClient.postgrest["profiles"].update({
-                set("is_onboarded", true)
-            }) {
-                filter {
-                    eq("id", userId)
+        try {
+            // Ensure profile exists first
+            val profile = getProfile(userId)
+            if (profile == null) {
+                val userEmail = supabaseClient.auth.currentUserOrNull()?.email ?: ""
+                supabaseClient.postgrest["profiles"].upsert(mapOf(
+                    "id" to userId,
+                    "email" to userEmail,
+                    "is_onboarded" to true
+                ))
+            } else {
+                // Mark as onboarded in profile
+                supabaseClient.postgrest["profiles"].update({
+                    set("is_onboarded", true)
+                }) {
+                    filter {
+                        eq("id", userId)
+                    }
                 }
             }
-        }
 
-        // First delete existing preferences for the user in Supabase
-        supabaseClient.postgrest["user_preferences"].delete {
-            filter {
-                eq("user_id", userId)
+            // First delete existing preferences for the user in Supabase
+            supabaseClient.postgrest["user_preferences"].delete {
+                filter {
+                    eq("user_id", userId)
+                }
             }
-        }
-        
-        // Then insert new ones in Supabase
-        val preferences = keywordTags.map { tag ->
-            UserPreference(userId = userId, keywordTag = tag)
-        }
-        if (preferences.isNotEmpty()) {
-            supabaseClient.postgrest["user_preferences"].insert(preferences)
-        }
+            
+            // Then insert new ones in Supabase
+            val preferences = keywordTags.map { tag ->
+                UserPreference(userId = userId, keywordTag = tag)
+            }
+            if (preferences.isNotEmpty()) {
+                supabaseClient.postgrest["user_preferences"].insert(preferences)
+            }
 
-        // Sync to local Room
-        keywordDao.syncUserPreferences(keywordTags.map { UserPreferenceEntity(it) })
+            // Sync to local Room
+            keywordDao.syncUserPreferences(keywordTags.map { UserPreferenceEntity(it) })
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     /**

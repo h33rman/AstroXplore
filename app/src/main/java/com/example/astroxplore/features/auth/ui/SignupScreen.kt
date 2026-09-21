@@ -42,6 +42,8 @@ fun SignupScreen(
 ) {
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
+    var institution by remember { mutableStateOf("") }
+    var orcidId by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
@@ -184,6 +186,47 @@ fun SignupScreen(
                                 Spacer(modifier = Modifier.height(16.dp))
 
                                 OutlinedTextField(
+                                    value = institution,
+                                    onValueChange = { institution = it },
+                                    label = { Text("Institution / University", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    leadingIcon = { Icon(Icons.Default.Business, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)) },
+                                    shape = MaterialTheme.shapes.extraLarge,
+                                    singleLine = true,
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                                        unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+                                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                        unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f),
+                                        focusedContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
+                                        unfocusedContainerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f)
+                                    )
+                                )
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                OutlinedTextField(
+                                    value = orcidId,
+                                    onValueChange = { orcidId = it },
+                                    label = { Text("ORCID iD (Optional)", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    leadingIcon = { Icon(Icons.Default.School, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)) },
+                                    shape = MaterialTheme.shapes.extraLarge,
+                                    singleLine = true,
+                                    placeholder = { Text("0000-0000-0000-0000") },
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                                        unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+                                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                        unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f),
+                                        focusedContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
+                                        unfocusedContainerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f)
+                                    )
+                                )
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                OutlinedTextField(
                                     value = email,
                                     onValueChange = { email = it },
                                     label = { Text(stringResource(R.string.email), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)) },
@@ -241,7 +284,9 @@ fun SignupScreen(
                                             email = email,
                                             password = password,
                                             firstName = firstName,
-                                            lastName = lastName
+                                            lastName = lastName,
+                                            institution = institution,
+                                            orcidId = orcidId
                                         )
                                     },
                                     modifier = Modifier.fillMaxWidth().height(64.dp),

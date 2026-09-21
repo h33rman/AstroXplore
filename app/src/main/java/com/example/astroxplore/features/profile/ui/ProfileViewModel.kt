@@ -57,8 +57,25 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             val user = authRepository.currentUser
             if (user != null) {
-                _userProfile.value = profileRepository.getProfile(user.id)
-                _userInterests.value = profileRepository.getUserPreferences(user.id)
+                // Reactive local profile observation
+                launch {
+                    profileRepository.getLocalProfile(user.id).collectLatest { profile ->
+                        _userProfile.value = profile
+                    }
+                }
+                
+                // Reactive local interests observation
+                launch {
+                    profileRepository.getLocalUserPreferences().collectLatest { prefs ->
+                        _userInterests.value = prefs
+                    }
+                }
+
+                // Background sync
+                launch {
+                    profileRepository.syncProfile(user.id)
+                    profileRepository.getUserPreferences(user.id)
+                }
             }
             
             profileRepository.getLocalKeywords().collectLatest {

@@ -3,25 +3,32 @@ package com.example.astroxplore.features.feed.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.astroxplore.core.network.NasaAdsQueryBuilder
+import com.example.astroxplore.core.network.NetworkConnectivityObserver
 import com.example.astroxplore.core.util.ErrorMapper
 import com.example.astroxplore.core.util.NavigationSignal
 import com.example.astroxplore.features.auth.data.AuthRepository
 import com.example.astroxplore.features.feed.data.PaperRepository
 import com.example.astroxplore.features.feed.model.PaperModel
+import com.example.astroxplore.features.groups.data.GroupRepository
+import com.example.astroxplore.features.groups.model.GroupModel
 import com.example.astroxplore.features.library.data.LibraryRepository
 import com.example.astroxplore.features.profile.data.ProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class FeedViewModel @Inject constructor(
     private val paperRepository: PaperRepository,
+    private val groupRepository: GroupRepository,
     private val profileRepository: ProfileRepository,
     private val authRepository: AuthRepository,
     private val libraryRepository: LibraryRepository,
-    private val navigationSignal: NavigationSignal
+    private val navigationSignal: NavigationSignal,
+    private val networkConnectivityObserver: NetworkConnectivityObserver
 ) : ViewModel() {
 
     private val _isRefreshing = MutableStateFlow(false)
@@ -38,9 +45,30 @@ class FeedViewModel @Inject constructor(
     private val _savedPaperIds = MutableStateFlow<Set<String>>(emptySet())
     val savedPaperIds: StateFlow<Set<String>> = _savedPaperIds.asStateFlow()
 
-    // Offline-First Feed: Reactively observe the database
-    val feedPapers: StateFlow<List<PaperModel>> = paperRepository.getCachedFeed()
+    val isOnline: StateFlow<Boolean> = networkConnectivityObserver.isConnected
         .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = true
+        )
+
+    val userGroups: StateFlow<List<GroupModel>> = groupRepository.getLocalGroups()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    // Offline-First Feed: Reactively observe the database
+    // Modified: Only show papers if online or if we specifically want to allow cached feed
+    // User requested: "remove the caching feeds" in offline mode.
+    val feedPapers: StateFlow<List<PaperModel>> = isOnline.flatMapLatest { online ->
+        if (online) {
+            paperRepository.getCachedFeed()
+        } else {
+            flowOf(emptyList())
+        }
+    }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
@@ -86,6 +114,12 @@ class FeedViewModel @Inject constructor(
     fun toggleSavePaper(paper: PaperModel) {
         viewModelScope.launch {
             libraryRepository.toggleSave(paper)
+        }
+    }
+
+    fun addPaperToGroup(groupId: String, bibcode: String) {
+        viewModelScope.launch {
+            groupRepository.addPaperToGroup(groupId, bibcode)
         }
     }
 

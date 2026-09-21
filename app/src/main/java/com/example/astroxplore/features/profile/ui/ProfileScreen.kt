@@ -37,6 +37,7 @@ import com.example.astroxplore.features.profile.model.ProfileModel
 fun ProfileScreen(
     onNavigateToLanguage: () -> Unit,
     onNavigateToInterests: () -> Unit,
+    onNavigateToEditProfile: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
@@ -64,7 +65,10 @@ fun ProfileScreen(
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        ProfileHeaderCard(profile = uiState.profile)
+        ProfileHeaderCard(
+            profile = uiState.profile,
+            onEditClick = onNavigateToEditProfile
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -137,9 +141,12 @@ fun ProfileScreen(
 }
 
 @Composable
-fun ProfileHeaderCard(profile: ProfileModel?) {
+fun ProfileHeaderCard(
+    profile: ProfileModel?,
+    onEditClick: () -> Unit
+) {
     ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onEditClick),
         shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surface

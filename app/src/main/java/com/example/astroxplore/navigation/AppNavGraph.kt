@@ -20,6 +20,7 @@ import com.example.astroxplore.features.groups.ui.GroupDetailsScreen
 import com.example.astroxplore.features.groups.ui.GroupsScreen
 import com.example.astroxplore.features.library.ui.LibraryScreen
 import com.example.astroxplore.features.onboarding.ui.OnboardingScreen
+import com.example.astroxplore.features.profile.ui.EditProfileScreen
 import com.example.astroxplore.features.profile.ui.InterestsScreen
 import com.example.astroxplore.features.profile.ui.LanguageScreen
 import com.example.astroxplore.features.profile.ui.ProfileScreen
@@ -50,6 +51,15 @@ fun AppNavGraph(
                 },
                 onPaperClick = { bibcode ->
                     navController.navigate(Screen.PaperDetails(bibcode))
+                },
+                onLibraryClick = {
+                    navController.navigate(Screen.Library) {
+                        popUpTo(navController.graph.startDestinationId) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
                 }
             )
         }
@@ -93,6 +103,9 @@ fun AppNavGraph(
                 },
                 onNavigateToInterests = {
                     navController.navigate(Screen.Interests)
+                },
+                onNavigateToEditProfile = {
+                    navController.navigate(Screen.EditProfile)
                 }
             )
         }
@@ -103,6 +116,11 @@ fun AppNavGraph(
         }
         composable<Screen.Interests> {
             InterestsScreen(onNavigateBack = {
+                navController.popBackStack()
+            })
+        }
+        composable<Screen.EditProfile> {
+            EditProfileScreen(onNavigateBack = {
                 navController.popBackStack()
             })
         }

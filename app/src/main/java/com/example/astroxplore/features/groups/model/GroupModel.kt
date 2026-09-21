@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class GroupModel(
     @SerialName("id") val id: String,
+    @SerialName("display_id") val displayId: String, // Short unique ID for searching
     @SerialName("name") val name: String,
     @SerialName("description") val description: String? = null,
     @SerialName("owner_id") val ownerId: String,
@@ -21,7 +22,18 @@ data class GroupPaperModel(
     @SerialName("bibcode") val bibcode: String,
     @SerialName("added_by") val addedBy: String,
     @SerialName("vote_count") val voteCount: Int = 0,
+    @SerialName("is_voted_by_me") val isVotedByMe: Boolean = false, // Client side field or calculated
     @SerialName("added_at") val addedAt: String? = null
+)
+
+@Serializable
+data class PresentationModel(
+    @SerialName("id") val id: String? = null,
+    @SerialName("group_id") val groupId: String,
+    @SerialName("bibcode") val bibcode: String,
+    @SerialName("presenter_id") val presenterId: String,
+    @SerialName("scheduled_at") val scheduledAt: String,
+    @SerialName("created_at") val createdAt: String? = null
 )
 
 @Serializable

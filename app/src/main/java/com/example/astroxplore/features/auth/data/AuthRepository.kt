@@ -25,7 +25,14 @@ class AuthRepository @Inject constructor(
     /**
      * @return Boolean - true if email confirmation is required
      */
-    suspend fun register(email: String, password: String, firstName: String, lastName: String): Boolean {
+    suspend fun register(
+        email: String, 
+        password: String, 
+        firstName: String, 
+        lastName: String,
+        institution: String? = null,
+        orcidId: String? = null
+    ): Boolean {
         val user = supabaseClient.auth.signUpWith(Email) {
             this.email = email
             this.password = password
@@ -41,13 +48,14 @@ class AuthRepository @Inject constructor(
                 firstName = firstName,
                 lastName = lastName,
                 fullName = "$firstName $lastName",
+                institution = institution,
+                orcidId = orcidId,
                 isOnboarded = false
             )
             supabaseClient.postgrest["profiles"].insert(initialProfile)
             return false
         } else {
-            // Confirmation is ON. We can't write to DB yet (RLS).
-            // We'll store these details locally or handle it upon first login.
+            // Confirmation is ON. We'll handle profile creation on first login.
             return true
         }
     }

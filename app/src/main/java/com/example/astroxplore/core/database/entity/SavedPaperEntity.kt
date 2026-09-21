@@ -13,5 +13,6 @@ data class SavedPaperEntity(
     val category: String,
     val dateDisplay: String,
     val citationCount: Int,
-    val savedAt: Long = System.currentTimeMillis()
+    val savedAt: Long = System.currentTimeMillis(),
+    val isSynced: Boolean = true
 )

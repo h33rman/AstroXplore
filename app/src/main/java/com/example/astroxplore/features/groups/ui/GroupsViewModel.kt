@@ -17,6 +17,9 @@ class GroupsViewModel @Inject constructor(
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing = _isRefreshing.asStateFlow()
 
+    private val _joinStatus = MutableSharedFlow<Boolean>()
+    val joinStatus = _joinStatus.asSharedFlow()
+
     // Offline-First: Reactively observe local database
     val groups: StateFlow<List<GroupModel>> = groupRepository.getLocalGroups()
         .stateIn(
@@ -48,7 +51,13 @@ class GroupsViewModel @Inject constructor(
     fun createGroup(name: String, description: String?, focusArea: String?) {
         viewModelScope.launch {
             groupRepository.createGroup(name, description, focusArea)
-            // No need to reload manually, the Flow will emit the new local group immediately
+        }
+    }
+
+    fun joinGroup(displayId: String) {
+        viewModelScope.launch {
+            val success = groupRepository.joinGroupByDisplayId(displayId)
+            _joinStatus.emit(success)
         }
     }
 }

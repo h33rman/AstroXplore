@@ -17,4 +17,7 @@ interface SavedPaperDao {
 
     @Query("SELECT EXISTS(SELECT * FROM saved_papers WHERE bibcode = :bibcode)")
     fun isPaperSaved(bibcode: String): Flow<Boolean>
+
+    @Query("SELECT * FROM saved_papers WHERE isSynced = 0")
+    suspend fun getUnsyncedPapers(): List<SavedPaperEntity>
 }

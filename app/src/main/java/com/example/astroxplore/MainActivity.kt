@@ -101,7 +101,8 @@ class MainActivity : ComponentActivity() {
                     dynamicColor = settingsState.dynamicColorEnabled
                 ) {
                     val isOnboarded by mainViewModel.isOnboarded.collectAsState()
-                    AstroXploreMain(sessionStatus, isOnboarded)
+                    val isOnline by mainViewModel.isOnline.collectAsState()
+                    AstroXploreMain(sessionStatus, isOnboarded, isOnline)
                 }
             }
         }
@@ -113,6 +114,7 @@ class MainActivity : ComponentActivity() {
 fun AstroXploreMain(
     sessionStatus: SessionStatus = SessionStatus.Initializing,
     isOnboarded: Boolean? = null,
+    isOnline: Boolean = true,
     mainViewModel: MainViewModel = hiltViewModel()
 ) {
     val navController = rememberNavController()
@@ -142,12 +144,21 @@ fun AstroXploreMain(
             }
             is SessionStatus.NotAuthenticated -> {
                 if (!isOnAuth) {
+                    // Bypass Splash even if offline, let login screen show error or cached view
                     navController.navigate(Screen.Login) {
                         popUpTo(0) { inclusive = true }
                     }
                 }
             }
-            else -> {} 
+            else -> {
+                // Initializing or other states: 
+                // If offline and splash is hanging, force a transition if we have a cached login or just proceed
+                if (!isOnline && isOnSplash) {
+                     navController.navigate(Screen.Login) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            } 
         }
     }
 

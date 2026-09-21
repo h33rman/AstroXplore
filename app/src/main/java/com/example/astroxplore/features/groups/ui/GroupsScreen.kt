@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.astroxplore.features.groups.model.GroupModel
+import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,8 +33,21 @@ fun GroupsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     var showCreateSheet by remember { mutableStateOf(false) }
+    var showJoinDialog by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        viewModel.joinStatus.collectLatest { success ->
+            if (success) {
+                snackbarHostState.showSnackbar("Successfully joined the club!")
+            } else {
+                snackbarHostState.showSnackbar("Club not found. Please check the ID.")
+            }
+        }
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             @Suppress("DEPRECATION")
             CenterAlignedTopAppBar(
@@ -44,6 +58,11 @@ fun GroupsScreen(
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = (-0.5).sp
                     ) 
+                },
+                actions = {
+                    IconButton(onClick = { showJoinDialog = true }) {
+                        Icon(Icons.Outlined.GroupAdd, contentDescription = "Join Club")
+                    }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
             )
@@ -102,6 +121,16 @@ fun GroupsScreen(
                 }
             )
         }
+
+        if (showJoinDialog) {
+            JoinGroupDialog(
+                onDismiss = { showJoinDialog = false },
+                onJoin = { id ->
+                    viewModel.joinGroup(id)
+                    showJoinDialog = false
+                }
+            )
+        }
     }
 }
 
@@ -146,9 +175,9 @@ fun GroupCard(group: GroupModel, onClick: () -> Unit) {
                         letterSpacing = (-0.5).sp
                     )
                     Text(
-                        text = "${group.memberCount} active researchers",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        text = "ID: ${group.displayId}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -190,6 +219,37 @@ fun GroupCard(group: GroupModel, onClick: () -> Unit) {
             }
         }
     }
+}
+
+@Composable
+fun JoinGroupDialog(
+    onDismiss: () -> Unit,
+    onJoin: (String) -> Unit
+) {
+    var id by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Join Journal Club", fontWeight = FontWeight.Bold) },
+        text = {
+            OutlinedTextField(
+                value = id,
+                onValueChange = { id = it.uppercase() },
+                label = { Text("Enter Club ID") },
+                placeholder = { Text("e.g. A1B2C3D4") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.medium,
+                singleLine = true
+            )
+        },
+        confirmButton = {
+            Button(onClick = { onJoin(id) }, enabled = id.length >= 4) {
+                Text("Join")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
