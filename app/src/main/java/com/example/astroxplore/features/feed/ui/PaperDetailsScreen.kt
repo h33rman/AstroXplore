@@ -1,6 +1,7 @@
 package com.example.astroxplore.features.feed.ui
 
 import android.content.Intent
+import android.content.ClipData
 import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -20,8 +21,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -33,6 +35,7 @@ import com.example.astroxplore.features.feed.ui.components.AstroAbstractView
 import com.example.astroxplore.features.feed.ui.components.AstroPaperTitleText
 import com.example.astroxplore.features.groups.model.GroupModel
 import com.example.astroxplore.features.groups.ui.components.GroupPickerSheet
+import com.example.astroxplore.core.ui.components.LottieLoadingView
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,7 +49,7 @@ fun PaperDetailsScreen(
     val isSaved by viewModel.isSaved.collectAsState()
     val userGroups by viewModel.userGroups.collectAsState()
     val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -129,16 +132,14 @@ fun PaperDetailsScreen(
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             when (val state = uiState) {
                 is PaperDetailsUiState.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
+                    LottieLoadingView(size = 150)
                 }
                 is PaperDetailsUiState.Success -> {
                     PaperDetailsContent(
                         paper = state.paper,
                         onCiteClick = {
-                            clipboardManager.setText(AnnotatedString(state.paper.bibcode))
                             scope.launch {
+                                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("bibcode", state.paper.bibcode)))
                                 snackbarHostState.showSnackbar("Bibcode copied to clipboard")
                             }
                         },

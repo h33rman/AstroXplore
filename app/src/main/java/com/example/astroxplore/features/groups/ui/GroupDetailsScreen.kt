@@ -23,8 +23,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.example.astroxplore.R
 import com.example.astroxplore.features.feed.ui.components.PaperCard
 import com.example.astroxplore.core.util.QrCodeUtils
+import com.example.astroxplore.core.ui.components.LottieLoadingView
 import com.example.astroxplore.features.groups.model.GroupModel
 import com.example.astroxplore.features.groups.ui.components.ConsensusVoting
 import com.example.astroxplore.features.groups.ui.components.GroupCalendar
@@ -203,9 +205,10 @@ fun ShelfTab(uiState: GroupDetailsUiState, onPaperClick: (String) -> Unit) {
     Box(modifier = Modifier.fillMaxSize()) {
         when (uiState) {
             is GroupDetailsUiState.Loading -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
+                LottieLoadingView(
+                    size = 150,
+                    resId = R.raw.book_loader
+                )
             }
             is GroupDetailsUiState.Success -> {
                 if (uiState.papers.isEmpty()) {

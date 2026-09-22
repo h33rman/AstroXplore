@@ -16,6 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.example.astroxplore.R
+import com.example.astroxplore.core.ui.components.LottieLoadingView
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,9 +41,10 @@ fun EditProfileScreen(
     ) { innerPadding ->
         when (uiState) {
             is EditProfileUiState.Loading -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
+                LottieLoadingView(
+                    size = 150,
+                    resId = R.raw.book_loader
+                )
             }
             is EditProfileUiState.Success -> {
                 val profile = (uiState as EditProfileUiState.Success).profile

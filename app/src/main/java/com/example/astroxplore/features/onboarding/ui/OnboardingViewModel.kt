@@ -31,10 +31,6 @@ class OnboardingViewModel @Inject constructor(
     private val _error = MutableStateFlow<Int?>(null)
     val error = _error.asStateFlow()
 
-    // Language selection
-    private val _selectedLanguage = MutableStateFlow("en")
-    val selectedLanguage = _selectedLanguage.asStateFlow()
-
     // Search and Interests logic matching InterestsViewModel
     private val _searchQuery = MutableStateFlow("")
     val searchQuery = _searchQuery.asStateFlow()
@@ -87,23 +83,11 @@ class OnboardingViewModel @Inject constructor(
         "Individual"
     )
 
-    val languages = listOf(
-        "en" to "English",
-        "fr" to "Français",
-        "es" to "Español",
-        "zh" to "中文",
-        "hi" to "हिन्दी"
-    )
-
     init {
         viewModelScope.launch {
             profileRepository.seedKeywordsIfEmpty()
             profileRepository.syncAvailableKeywords()
         }
-    }
-
-    fun selectLanguage(code: String) {
-        _selectedLanguage.value = code
     }
 
     fun setSearchQuery(query: String) {
@@ -138,9 +122,6 @@ class OnboardingViewModel @Inject constructor(
                 return@launch
             }
             try {
-                // Save language
-                settingsRepository.setLanguage(_selectedLanguage.value)
-
                 // Update profile with professional details
                 val currentProfile = profileRepository.getProfile(user.id)
                 val updatedProfile = (currentProfile ?: ProfileModel(id = user.id, email = user.email ?: "")).copy(

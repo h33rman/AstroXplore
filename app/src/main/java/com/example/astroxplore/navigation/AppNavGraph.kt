@@ -22,10 +22,8 @@ import com.example.astroxplore.features.library.ui.LibraryScreen
 import com.example.astroxplore.features.onboarding.ui.OnboardingScreen
 import com.example.astroxplore.features.profile.ui.EditProfileScreen
 import com.example.astroxplore.features.profile.ui.InterestsScreen
-import com.example.astroxplore.features.profile.ui.LanguageScreen
 import com.example.astroxplore.features.profile.ui.ProfileScreen
 import com.example.astroxplore.features.search.ui.ExploreScreen
-import com.example.astroxplore.features.splash.ui.SplashScreen
 
 @Composable
 fun AppNavGraph(
@@ -34,16 +32,9 @@ fun AppNavGraph(
 ) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Splash,
+        startDestination = Screen.Login,
         modifier = modifier
     ) {
-        composable<Screen.Splash> {
-            SplashScreen(
-                onSplashComplete = {
-                    // Letting MainActivity handle the transition once session state is determined
-                }
-            )
-        }
         composable<Screen.Feed> {
             FeedScreen(
                 onSearchClick = {
@@ -98,9 +89,6 @@ fun AppNavGraph(
         }
         composable<Screen.Profile> {
             ProfileScreen(
-                onNavigateToLanguage = {
-                    navController.navigate(Screen.Language)
-                },
                 onNavigateToInterests = {
                     navController.navigate(Screen.Interests)
                 },
@@ -108,11 +96,6 @@ fun AppNavGraph(
                     navController.navigate(Screen.EditProfile)
                 }
             )
-        }
-        composable<Screen.Language> {
-            LanguageScreen(onNavigateBack = {
-                navController.popBackStack()
-            })
         }
         composable<Screen.Interests> {
             InterestsScreen(onNavigateBack = {

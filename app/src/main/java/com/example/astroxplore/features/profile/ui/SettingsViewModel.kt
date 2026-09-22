@@ -18,13 +18,11 @@ class SettingsViewModel @Inject constructor(
 
     val uiState: StateFlow<ProfileUiState> = combine(
         settingsRepository.themeMode,
-        settingsRepository.dynamicColorEnabled,
-        settingsRepository.language
-    ) { themeMode, dynamicColor, language ->
+        settingsRepository.dynamicColorEnabled
+    ) { themeMode, dynamicColor ->
         ProfileUiState(
             themeMode = themeMode,
-            dynamicColorEnabled = dynamicColor,
-            language = language
+            dynamicColorEnabled = dynamicColor
         )
     }.stateIn(
         scope = viewModelScope,

@@ -15,6 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.example.astroxplore.core.ui.components.LottieLoadingView
 import com.example.astroxplore.features.feed.ui.components.PaperCard
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,7 +46,9 @@ fun LibraryScreen(
             onRefresh = { viewModel.syncLibrary() },
             modifier = Modifier.fillMaxSize().padding(innerPadding)
         ) {
-            if (papers.isEmpty() && !isRefreshing) {
+            if (isRefreshing && papers.isEmpty()) {
+                LottieLoadingView(size = 150)
+            } else if (papers.isEmpty()) {
                 EmptyLibraryState()
             } else {
                 LazyColumn(

@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.astroxplore.R
+import com.example.astroxplore.core.ui.components.LottieLoadingView
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -43,9 +44,6 @@ fun OnboardingScreen(
 
     var currentStep by remember { mutableIntStateOf(1) }
     var showSuccess by remember { mutableStateOf(false) }
-    
-    // Step Language
-    val selectedLanguage by viewModel.selectedLanguage.collectAsState()
 
     // Step Professional
     var affiliationType by remember { mutableStateOf("") }
@@ -85,19 +83,12 @@ fun OnboardingScreen(
                 containerColor = Color.Transparent,
                 topBar = {
                     Column {
-                        if (isLoading) {
-                            LinearProgressIndicator(
-                                modifier = Modifier.fillMaxWidth(),
-                                color = MaterialTheme.colorScheme.primary,
-                                trackColor = MaterialTheme.colorScheme.surfaceVariant
-                            )
-                        }
+                        // Progress bar for onboarding steps (Keep as linear)
                         TopAppBar(
                             title = { 
                                 Text(
                                     when(currentStep) {
-                                        1 -> "Language"
-                                        2 -> "Professional Background"
+                                        1 -> "Professional Background"
                                         else -> "Research Interests"
                                     }, 
                                     style = MaterialTheme.typography.titleLarge,
@@ -120,7 +111,7 @@ fun OnboardingScreen(
                         )
                         
                         val progress by animateFloatAsState(
-                            targetValue = currentStep / 3f,
+                            targetValue = currentStep / 2f,
                             animationSpec = spring(stiffness = Spring.StiffnessLow),
                             label = "progress"
                         )
@@ -140,22 +131,13 @@ fun OnboardingScreen(
                                 Button(
                                     onClick = { currentStep = 2 },
                                     modifier = Modifier.fillMaxWidth().height(64.dp),
-                                    shape = MaterialTheme.shapes.extraLarge
-                                ) {
-                                    Text("Next: Background", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                            2 -> {
-                                Button(
-                                    onClick = { currentStep = 3 },
-                                    modifier = Modifier.fillMaxWidth().height(64.dp),
                                     enabled = affiliationType.isNotEmpty() && country.isNotEmpty() && educationLevel.isNotEmpty(),
                                     shape = MaterialTheme.shapes.extraLarge
                                 ) {
                                     Text("Next: Select Interests", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                 }
                             }
-                            3 -> {
+                            2 -> {
                                 Button(
                                     onClick = { 
                                         viewModel.completeOnboarding(
@@ -214,13 +196,6 @@ fun OnboardingScreen(
 
                         when (step) {
                             1 -> {
-                                LanguageStep(
-                                    selectedLanguage = selectedLanguage,
-                                    onLanguageSelected = { viewModel.selectLanguage(it) },
-                                    languages = viewModel.languages
-                                )
-                            }
-                            2 -> {
                                 ProfessionalStep(
                                     affiliationType = affiliationType,
                                     onAffiliationTypeChange = { affiliationType = it },
@@ -239,7 +214,7 @@ fun OnboardingScreen(
                                     viewModel = viewModel
                                 )
                             }
-                            3 -> {
+                            2 -> {
                                 InterestsStep(
                                     selectedInterests = selectedInterests,
                                     viewModel = viewModel
@@ -251,55 +226,13 @@ fun OnboardingScreen(
             }
         }
     }
-}
 
-@Composable
-fun LanguageStep(
-    selectedLanguage: String,
-    onLanguageSelected: (String) -> Unit,
-    languages: List<Pair<String, String>>
-) {
-    Column(horizontalAlignment = Alignment.Start) {
-        Text(
-            text = "Welcome! Choose your preferred language",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
-        Spacer(modifier = Modifier.height(32.dp))
-
-        languages.forEach { (code, name) ->
-            val isSelected = selectedLanguage == code
-            Surface(
-                onClick = { onLanguageSelected(code) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                shape = MaterialTheme.shapes.large,
-                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-                border = BorderStroke(
-                    width = 1.dp,
-                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
-                )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .padding(20.dp)
-                        .fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                    )
-                    RadioButton(
-                        selected = isSelected,
-                        onClick = { onLanguageSelected(code) }
-                    )
-                }
-            }
+    if (isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background.copy(alpha = 0.7f)),
+            contentAlignment = Alignment.Center
+        ) {
+            LottieLoadingView(size = 200)
         }
     }
 }

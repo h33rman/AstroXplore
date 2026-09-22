@@ -18,9 +18,16 @@ class PaperRepository @Inject constructor(
         entities.map { it.toDomainModel() }
     }
 
-    suspend fun refreshFeed(query: String) {
+    suspend fun refreshFeed(query: String, append: Boolean = false) {
         val newPapers = getPapersByQuery(query, page = 0, pageSize = 20)
-        feedPaperDao.refreshFeed(newPapers.map { it.toFeedEntity() })
+        if (!append) {
+            feedPaperDao.refreshFeed(newPapers.map { it.toFeedEntity() })
+        } else {
+            // Room handles append if we use a specific strategy, but usually feed is refreshed.
+            // For infinite scroll, we might not want to persist all 1000 pages to local DB
+            // Let's keep local DB for the "Recent Top 20" and handle deep scroll in-memory/cache.
+            feedPaperDao.insertPapers(newPapers.map { it.toFeedEntity() })
+        }
     }
 
     suspend fun getPapersByQuery(

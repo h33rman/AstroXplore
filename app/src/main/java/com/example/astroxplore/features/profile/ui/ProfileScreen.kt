@@ -35,7 +35,6 @@ import com.example.astroxplore.features.profile.model.ProfileModel
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
-    onNavigateToLanguage: () -> Unit,
     onNavigateToInterests: () -> Unit,
     onNavigateToEditProfile: () -> Unit,
     modifier: Modifier = Modifier,
@@ -78,17 +77,6 @@ fun ProfileScreen(
                 title = "My Interests",
                 subtitle = if (uiState.interests.isEmpty()) "Select your research topics" else uiState.interests.joinToString(", "),
                 onClick = onNavigateToInterests
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        SettingsSection(title = stringResource(R.string.general)) {
-            SettingsItem(
-                icon = Icons.Default.Language,
-                title = stringResource(R.string.language),
-                subtitle = getLanguageName(uiState.language),
-                onClick = onNavigateToLanguage
             )
         }
 
@@ -416,16 +404,5 @@ fun DynamicColorToggle(
             checked = enabled,
             onCheckedChange = onToggle
         )
-    }
-}
-
-fun getLanguageName(code: String): String {
-    return when (code) {
-        "en" -> "English"
-        "fr" -> "Français"
-        "es" -> "Español"
-        "zh" -> "中文"
-        "hi" -> "हिन्दी"
-        else -> "English"
     }
 }

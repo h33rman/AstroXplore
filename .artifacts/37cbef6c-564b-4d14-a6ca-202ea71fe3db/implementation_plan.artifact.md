@@ -1,46 +1,51 @@
-# Implementation Plan - Bidirectional Synchronization & Offline-First Profiles
+# Implementation Plan - Modern Android Splash Screen API
 
-This plan focuses on making the User Profile, Library (Saved Papers), and Journal Clubs robustly offline-first by implementing local caching and bidirectional synchronization.
+This plan migrates the app from a custom Compose-based splash screen to the official **Android 12+ Splash Screen API** using `androidx.core:splashscreen`. This provides a smoother, native launch experience and reduces perceived app startup time.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **Database Version Upgrade**: The Room database schema has been upgraded to version 6. A destructive migration is configured for development, meaning local data will be reset on first launch after this update.
+> **Asset Requirements**: To complete this migration, I need the following from your Illustrator design:
+> 1. **Foreground Icon (SVG)**: A 108dp x 108dp vector. Ensure the main logo is centered within a **72dp diameter safe zone**.
+> 2. **Background Color**: The Hex code (e.g., `#0F172A`) you want for the splash background.
 
 ## Proposed Changes
 
-### Core: Offline-First Foundations
+### Core: Infrastructure
 
-#### [NEW] [ProfileEntity.kt](file:///D:/Apps_Softwares/AstroXplore/app/src/main/java/com/example/astroxplore/core/database/entity/ProfileEntity.kt) / [ProfileDao.kt](file:///D:/Apps_Softwares/AstroXplore/app/src/main/java/com/example/astroxplore/core/database/dao/ProfileDao.kt)
-- Adds local storage for User Profiles including names, affiliation, and ORCID.
-- Supports `isSynced` flag to track changes made while offline.
+#### [MODIFY] [libs.versions.toml](file:///D:/Apps_Softwares/AstroXplore/gradle/libs.versions.toml)
+- Add `androidx-core-splashscreen = "1.0.1"` (or latest).
 
-#### [MODIFY] [AppDatabase.kt](file:///D:/Apps_Softwares/AstroXplore/app/src/main/java/com/example/astroxplore/core/database/AppDatabase.kt)
-- Bump version to 6.
-- Register `ProfileEntity` and `ProfileDao`.
+#### [MODIFY] [build.gradle.kts (app)](file:///D:/Apps_Softwares/AstroXplore/app/build.gradle.kts)
+- Include the splashscreen library dependency.
 
 ---
 
-### Features: Synchronization Logic
+### UI & Theming
 
-#### [MODIFY] [ProfileRepository.kt](file:///D:/Apps_Softwares/AstroXplore/app/src/main/java/com/example/astroxplore/features/profile/data/ProfileRepository.kt)
-- Implements `syncProfile` to push offline changes to Supabase.
-- Uses `ProfileDao` for instant local feedback even when network is unstable.
+#### [MODIFY] [themes.xml](file:///D:/Apps_Softwares/AstroXplore/app/src/main/res/values/themes.xml)
+- Define `Theme.AstroXplore.Starting`:
+    - Set `windowSplashScreenBackground`.
+    - Set `windowSplashScreenAnimatedIcon`.
+    - Set `postSplashScreenTheme` to `Theme.AstroXplore`.
 
-#### [MODIFY] [LibraryRepository.kt](file:///D:/Apps_Softwares/AstroXplore/app/src/main/java/com/example/astroxplore/features/library/data/LibraryRepository.kt)
-- Enhances `syncLibrary` to fetch all remote saved papers and update local Room cache.
-- Tracks `isSynced` for saved papers.
+#### [MODIFY] [AndroidManifest.xml](file:///D:/Apps_Softwares/AstroXplore/app/src/main/AndroidManifest.xml)
+- Update `MainActivity` to use `android:theme="@style/Theme.AstroXplore.Starting"`.
 
-#### [MODIFY] [MainViewModel.kt](file:///D:/Apps_Softwares/AstroXplore/app/src/main/java/com/example/astroxplore/MainViewModel.kt)
-- Global sync orchestration: Triggers sync on app launch and when connectivity returns.
+---
+
+### Logic & Cleanup
+
+#### [MODIFY] [MainActivity.kt](file:///D:/Apps_Softwares/AstroXplore/app/src/main/java/com/example/astroxplore/MainActivity.kt)
+- Call `installSplashScreen()` before `super.onCreate()`.
+- Use `setKeepOnScreenCondition` to wait for Supabase/Hilt initialization before transitioning to the main UI.
+
+#### [DELETE] [SplashScreen.kt](file:///D:/Apps_Softwares/AstroXplore/app/src/main/java/com/example/astroxplore/features/splash/ui/SplashScreen.kt)
+- Remove the legacy custom splash screen and its navigation logic in `AppNavGraph`.
 
 ## Verification Plan
 
-### Automated Tests
-- `ProfileRepositoryTest`: Verify that `updateProfile` saves locally and attempts a remote sync.
-- `LibraryRepositoryTest`: Verify that `syncLibrary` merges remote data into local storage.
-
 ### Manual Verification
-1. **Offline Profile Edit**: Disable internet, update profile name, then enable internet and verify it reflects in Supabase.
-2. **Device Sync**: Log in on a second device and verify that Library and Profile data are pulled immediately.
-3. **Connectivity Transitions**: Verify that sync is triggered automatically when toggling Airplane Mode.
+1. **Cold Start**: Verify the native icon appears immediately when tapping the app icon.
+2. **Transition**: Ensure a seamless transition from the native splash to either the Login or Feed screen.
+3. **OS Compatibility**: Test on Android 11 (legacy) and Android 12+ (modern) to ensure consistent behavior.

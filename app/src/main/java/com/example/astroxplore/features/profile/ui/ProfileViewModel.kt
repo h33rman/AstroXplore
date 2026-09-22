@@ -26,10 +26,9 @@ class ProfileViewModel @Inject constructor(
     val uiState: StateFlow<ProfileUiState> = combine(
         combine(
             settingsRepository.themeMode,
-            settingsRepository.dynamicColorEnabled,
-            settingsRepository.language
-        ) { themeMode, dynamicColor, language ->
-            Triple(themeMode, dynamicColor, language)
+            settingsRepository.dynamicColorEnabled
+        ) { themeMode, dynamicColor ->
+            Pair(themeMode, dynamicColor)
         },
         _userProfile,
         _userInterests,
@@ -38,7 +37,6 @@ class ProfileViewModel @Inject constructor(
         ProfileUiState(
             themeMode = settings.first,
             dynamicColorEnabled = settings.second,
-            language = settings.third,
             profile = profile,
             interests = interests,
             availableKeywords = keywords
@@ -100,12 +98,6 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    fun setLanguage(languageCode: String) {
-        viewModelScope.launch {
-            settingsRepository.setLanguage(languageCode)
-        }
-    }
-
     fun updateInterests(interests: List<String>) {
         val user = authRepository.currentUser ?: return
         viewModelScope.launch {
@@ -124,7 +116,6 @@ class ProfileViewModel @Inject constructor(
 data class ProfileUiState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val dynamicColorEnabled: Boolean = true,
-    val language: String = "en",
     val profile: ProfileModel? = null,
     val interests: List<String> = emptyList(),
     val availableKeywords: List<String> = emptyList()

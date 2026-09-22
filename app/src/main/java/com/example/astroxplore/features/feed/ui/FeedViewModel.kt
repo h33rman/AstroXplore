@@ -13,6 +13,7 @@ import com.example.astroxplore.features.groups.data.GroupRepository
 import com.example.astroxplore.features.groups.model.GroupModel
 import com.example.astroxplore.features.library.data.LibraryRepository
 import com.example.astroxplore.features.profile.data.ProfileRepository
+import com.example.astroxplore.features.profile.model.ProfileModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
@@ -33,6 +34,9 @@ class FeedViewModel @Inject constructor(
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing = _isRefreshing.asStateFlow()
+
+    private val _isLoadingMore = MutableStateFlow(false)
+    val isLoadingMore = _isLoadingMore.asStateFlow()
 
     private val _error = MutableStateFlow<Int?>(null)
     val error = _error.asStateFlow()
@@ -59,30 +63,52 @@ class FeedViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    // Offline-First Feed: Reactively observe the database
-    // Modified: Only show papers if online or if we specifically want to allow cached feed
-    // User requested: "remove the caching feeds" in offline mode.
-    val feedPapers: StateFlow<List<PaperModel>> = isOnline.flatMapLatest { online ->
-        if (online) {
-            paperRepository.getCachedFeed()
+    val userProfile: StateFlow<ProfileModel?> = flow {
+        val userId = authRepository.currentUser?.id
+        if (userId != null) {
+            emitAll(profileRepository.getLocalProfile(userId))
         } else {
-            flowOf(emptyList())
+            emit(null)
         }
     }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = null
+    )
+
+    val userInterests: StateFlow<List<String>> = profileRepository.getLocalUserPreferences()
+        .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
 
+    private var currentPage = 0
+    private var isEndReached = false
+
+    // In-memory list to support infinite scroll smoothly
+    private val _pagedPapers = MutableStateFlow<List<PaperModel>>(emptyList())
+    
+    // Combine local DB and Paged results
+    val feedPapers: StateFlow<List<PaperModel>> = combine(
+        paperRepository.getCachedFeed(),
+        _pagedPapers,
+        _selectedCategory
+    ) { cached, paged, category ->
+        // If we have paged results, show them. 
+        // If on "For You" and no paged results yet, show cached.
+        if (category == "For You" && paged.isEmpty()) cached else paged
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
     init {
         loadSavedPapers()
         
-        // Initial load logic:
-        // Refresh only ONCE per app session on startup.
-        if (!isInitialSyncDone) {
-            refresh()
-            isInitialSyncDone = true
-        }
+        // Initial load
+        refresh()
     }
 
     private fun loadSavedPapers() {
@@ -93,22 +119,63 @@ class FeedViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Triggers a manual online sync with NASA ADS
-     */
     fun refresh() {
+        if (_isRefreshing.value) return
         viewModelScope.launch {
             _isRefreshing.value = true
             _error.value = null
+            currentPage = 0
+            isEndReached = false
             try {
                 val query = buildQuery(_selectedCategory.value)
-                paperRepository.refreshFeed(query)
+                println("AstroXplore: Refreshing category ${_selectedCategory.value} with query: $query")
+                val freshPapers = paperRepository.getPapersByQuery(query, page = 0)
+                println("AstroXplore: Found ${freshPapers.size} papers")
+                
+                _pagedPapers.value = freshPapers
+                
+                // Only cache "For You" top results for offline
+                if (_selectedCategory.value == "For You") {
+                    paperRepository.refreshFeed(query)
+                }
             } catch (e: Exception) {
                 _error.value = ErrorMapper.mapToMessage(e)
             } finally {
                 _isRefreshing.value = false
             }
         }
+    }
+
+    fun loadNextPage() {
+        if (_isLoadingMore.value || isEndReached || !isOnline.value) return
+        
+        viewModelScope.launch {
+            _isLoadingMore.value = true
+            try {
+                currentPage++
+                val query = buildQuery(_selectedCategory.value)
+                val newPapers = paperRepository.getPapersByQuery(query, page = currentPage)
+                
+                if (newPapers.isEmpty()) {
+                    isEndReached = true
+                } else {
+                    _pagedPapers.value = _pagedPapers.value + newPapers
+                }
+            } catch (e: Exception) {
+                currentPage-- // Reset page on error to allow retry
+            } finally {
+                _isLoadingMore.value = false
+            }
+        }
+    }
+
+    fun selectCategory(category: String) {
+        if (_selectedCategory.value == category) return
+        _selectedCategory.value = category
+        _pagedPapers.value = emptyList() // Clear current list to show skeletons
+        currentPage = 0
+        isEndReached = false
+        refresh()
     }
 
     fun toggleSavePaper(paper: PaperModel) {
@@ -130,11 +197,11 @@ class FeedViewModel @Inject constructor(
                 val prefs = userId?.let { profileRepository.getUserPreferences(it) } ?: emptyList()
                 NasaAdsQueryBuilder.buildPreferenceQuery(prefs)
             }
-            else -> "keyword:\"$category\" AND property:eprint"
+            else -> {
+                // High-fidelity broad search
+                val cleanCategory = category.trim()
+                "($cleanCategory) AND database:astronomy"
+            }
         }
-    }
-
-    companion object {
-        private var isInitialSyncDone = false
     }
 }

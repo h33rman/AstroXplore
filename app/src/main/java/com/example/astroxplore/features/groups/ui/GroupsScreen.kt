@@ -21,6 +21,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.example.astroxplore.R
+import com.example.astroxplore.core.ui.components.LottieLoadingView
 import com.example.astroxplore.features.groups.model.GroupModel
 import kotlinx.coroutines.flow.collectLatest
 
@@ -85,9 +87,10 @@ fun GroupsScreen(
         ) {
             when (val state = uiState) {
                 is GroupsUiState.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
+                    LottieLoadingView(
+                        size = 150,
+                        resId = R.raw.book_loader
+                    )
                 }
                 is GroupsUiState.Success -> {
                     if (state.groups.isEmpty() && !isRefreshing) {

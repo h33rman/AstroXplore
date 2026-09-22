@@ -33,6 +33,7 @@ import com.example.astroxplore.features.feed.model.PaperModel
 import com.example.astroxplore.features.feed.ui.components.PaperCard
 import com.example.astroxplore.features.feed.ui.components.PaperDetailsBottomSheet
 import com.example.astroxplore.features.feed.ui.components.PaperCardSkeleton
+import com.example.astroxplore.core.ui.components.LottieLoadingView
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -153,9 +154,7 @@ fun ExploreScreen(
                             onKeywordClick = { viewModel.onQueryChange(it) }
                         )
                         ExploreUiState.Loading -> {
-                            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                                items(5) { PaperCardSkeleton() }
-                            }
+                            LottieLoadingView(size = 150)
                         }
                         is ExploreUiState.Success -> {
                             if (state.results.isEmpty()) {
@@ -277,14 +276,12 @@ fun SearchIdleState(
         Surface(
             color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
             shape = CircleShape,
-            modifier = Modifier.size(100.dp)
+            modifier = Modifier.size(120.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    Icons.Outlined.AutoMode,
-                    contentDescription = null,
-                    modifier = Modifier.size(50.dp),
-                    tint = MaterialTheme.colorScheme.primary
+                LottieLoadingView(
+                    size = 100,
+                    resId = R.raw.book_loader
                 )
             }
         }

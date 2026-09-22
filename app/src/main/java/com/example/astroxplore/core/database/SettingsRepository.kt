@@ -25,7 +25,6 @@ class SettingsRepository @Inject constructor(
     private object PreferencesKeys {
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
-        val LANGUAGE = stringPreferencesKey("language")
         val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
     }
 
@@ -44,13 +43,6 @@ class SettingsRepository @Inject constructor(
             preferences[PreferencesKeys.DYNAMIC_COLOR] ?: true
         }
 
-    val language: Flow<String> = context.dataStore.data
-        .catch { exception ->
-            if (exception is IOException) emit(emptyPreferences()) else throw exception
-        }.map { preferences ->
-            preferences[PreferencesKeys.LANGUAGE] ?: "en"
-        }
-
     val onboardingComplete: Flow<Boolean> = context.dataStore.data
         .catch { exception ->
             if (exception is IOException) emit(emptyPreferences()) else throw exception
@@ -67,12 +59,6 @@ class SettingsRepository @Inject constructor(
     suspend fun setDynamicColor(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.DYNAMIC_COLOR] = enabled
-        }
-    }
-
-    suspend fun setLanguage(languageCode: String) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.LANGUAGE] = languageCode
         }
     }
 

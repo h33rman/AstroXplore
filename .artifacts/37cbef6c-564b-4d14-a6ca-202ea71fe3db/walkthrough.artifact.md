@@ -1,31 +1,27 @@
-# Walkthrough - Collaboration & Journal Clubs
+# Walkthrough - Native Android Splash Screen
 
-I have successfully implemented the high-fidelity collaboration suite for AstroXplore, resolving the Supabase schema issues and adding functional Journal Club features.
+I have successfully migrated AstroXplore to use the modern **Android 12+ Splash Screen API**. This provides a native, high-performance launch experience that respects the system's splash protocols.
 
 ## Changes Made
 
-### 1. Supabase Infrastructure
-- Created a comprehensive SQL migration script ([20240524_init_collaboration.sql](file:///D:/Apps_Softwares/AstroXplore/supabase/migrations/20240524_init_collaboration.sql)) that defines the `groups`, `group_members`, `group_papers`, `group_paper_votes`, and `group_presentations` tables.
-- Implemented **Row Level Security (RLS)** to ensure data privacy within clubs.
-- Added database triggers to automatically manage `member_count` and `vote_count`.
+### 1. Assets & Theming
+- **Vector Logo**: Imported your `AstroXplore_appicon.svg` as a native Android Vector Drawable ([ic_splash_logo.xml](file:///D:/Apps_Softwares/AstroXplore/app/src/main/res/drawable/ic_splash_logo.xml)).
+- **Branding Color**: Set the splash background to your requested `#F8FAFC` in [colors.xml](file:///D:/Apps_Softwares/AstroXplore/app/src/main/res/values/colors.xml).
+- **Splash Theme**: Created `Theme.AstroXplore.Starting` in [themes.xml](file:///D:/Apps_Softwares/AstroXplore/app/src/main/res/values/themes.xml), configuring it as the entry theme for the app.
 
-### 2. Collaborative Logic
-- **Voting System**: Members can now vote on papers within a group shelf to build consensus on what to read next.
-- **Group Calendar**: Admins and members can schedule presentations for specific papers.
-- **Offline-First Sync**: Group data is cached locally in Room, allowing researchers to browse their clubs even without a connection.
+### 2. Core Implementation
+- **Dependencies**: Added `androidx.core:core-splashscreen` to the project.
+- **Activity Integration**: Updated [MainActivity.kt](file:///D:/Apps_Softwares/AstroXplore/app/src/main/java/com/example/astroxplore/MainActivity.kt) to call `installSplashScreen()`.
+- **Intelligent Loading**: Implemented `setKeepOnScreenCondition`. The splash screen will now automatically stay visible until the app determines the user's authentication state (Hilt/Supabase initialization), ensuring a flicker-free transition directly into the Feed or Login screen.
 
-### 3. UI Components
-- [ConsensusVoting.kt](file:///D:/Apps_Softwares/AstroXplore/app/src/main/java/com/example/astroxplore/features/groups/ui/components/ConsensusVoting.kt): A dedicated tab for tracking paper votes with interactive "Thumb Up" actions.
-- [GroupCalendar.kt](file:///D:/Apps_Softwares/AstroXplore/app/src/main/java/com/example/astroxplore/features/groups/ui/components/GroupCalendar.kt): A schedule view for upcoming presentations.
-- Integrated these into the `GroupDetailsScreen` with a clean tabbed interface (Shelf, Votes, Calendar, Admin).
+### 3. Code Cleanup
+- **Deleted Legacy Splash**: Removed the custom `SplashScreen.kt` and its associated routes in `AppNavGraph.kt`.
+- **Simplified Navigation**: Stripped out the redundant manual splash-to-login timer logic, allowing the OS and native API to handle the launch duration.
 
 ## Verification Results
-
 - **Build Status**: `app:assembleDebug` completed successfully.
-- **Schema Validation**: SQL script verified for syntax and logic (RLS, Triggers).
-- **Architecture**: Followed Clean Architecture and UDF patterns, delegating all logic to `GroupRepository` and `GroupDetailsViewModel`.
+- **Performance**: Reduced app startup complexity by removing the heavy Compose-based initial navigation state.
+- **UX**: The app now launches instantly with your custom logo and background color.
 
-## Next Steps for User
-1. **Apply SQL Migration**: Open your Supabase Dashboard -> SQL Editor and paste the contents of `20240524_init_collaboration.sql`.
-2. **Launch App**: Run the app and try creating a new Journal Club in the "Groups" tab.
-3. **Invite Peers**: Use the generated QR code or Club ID to test the joining flow.
+> [!TIP]
+> To test the new splash screen, perform a "Cold Start" by closing the app from the task switcher and relaunching it from the home screen icon.

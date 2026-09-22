@@ -18,6 +18,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.example.astroxplore.R
+import com.example.astroxplore.core.ui.components.LottieLoadingView
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -117,10 +119,9 @@ fun InterestsScreen(
                             )
                         ) {
                             if (saveStatus is SaveStatus.Loading) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    strokeWidth = 2.dp
+                                LottieLoadingView(
+                                    size = 40,
+                                    resId = R.raw.book_loader
                                 )
                             } else {
                                 Text("Update Feed Preferences", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)

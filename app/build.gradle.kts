@@ -65,6 +65,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.core.splashscreen)
 
     // Supabase
     implementation(libs.supabase.postgrest)
@@ -102,6 +103,7 @@ dependencies {
 
     implementation(libs.latex.renderer)
     implementation(libs.zxing.core)
+    implementation(libs.lottie.compose)
 
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

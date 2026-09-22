@@ -19,6 +19,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -30,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.astroxplore.R
 import com.example.astroxplore.core.ui.components.DynamicIslandError
+import com.example.astroxplore.core.ui.components.LottieLoadingView
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -130,6 +132,15 @@ fun SignupScreen(
                             enter = fadeIn(tween(1000)) + slideInVertically { it / 2 }
                         ) {
                             Column {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_splash_logo),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(60.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                
+                                Spacer(modifier = Modifier.height(24.dp))
+
                                 Text(
                                     text = stringResource(R.string.signup),
                                     style = MaterialTheme.typography.displayMedium.copy(
@@ -301,7 +312,10 @@ fun SignupScreen(
                                 ) {
                                     AnimatedContent(targetState = uiState is SignupUiState.Loading, label = "loading") { isLoading ->
                                         if (isLoading) {
-                                            CircularProgressIndicator(modifier = Modifier.size(28.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 3.dp)
+                                            LottieLoadingView(
+                                                size = 40,
+                                                resId = R.raw.book_loader
+                                            )
                                         } else {
                                             Text(text = stringResource(R.string.signup), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                                         }
